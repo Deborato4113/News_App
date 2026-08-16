@@ -21,9 +21,12 @@ app.use(errorHandler);
 
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => {
-    console.log('✅  MongoDB connected');
-    app.listen(process.env.PORT || 5000, () =>
-      console.log(`🚀  Server running on http://localhost:${process.env.PORT || 5000}`)
-    );
+    console.log('✅ MongoDB connected');
+
+    const PORT = process.env.PORT || 5000;
+
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+    });
   })
   .catch(err => { console.error('❌ MongoDB error:', err.message); process.exit(1); });

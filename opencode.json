@@ -1,0 +1,22 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "nvidia": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "NVIDIA NIM",
+      "options": {
+        "baseURL": "https://integrate.api.nvidia.com/v1"
+      },
+      "models": {
+        "nvidia/nemotron-3-ultra-550b-a55b": {
+          "name": "Nemotron 3 Ultra",
+          "limit": {
+            "context": 1000000,
+            "output": 16384
+          }
+        }
+      }
+    }
+  },
+  "model": "nvidia/nemotron-3-ultra-550b-a55b"
+}

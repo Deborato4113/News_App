@@ -1,12 +1,28 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BrainCircuit, CheckCircle, XCircle, RotateCcw, Trophy } from 'lucide-react';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
 
-const REGIONS = ['mumbai','delhi','bangalore','london','newyork','singapore'];
+const DEFAULT_REGIONS = ['mumbai','delhi','bangalore','london','newyork','singapore','jalpaiguri'];
+
+function getSearchHistory() {
+  try { return JSON.parse(localStorage.getItem('nexusai_history') || '[]'); } catch { return []; }
+}
 
 export default function Quiz() {
   const [region,    setRegion]    = useState('mumbai');
+  const [regions,   setRegions]   = useState(DEFAULT_REGIONS);
+
+  useEffect(() => {
+    function updateRegions() {
+      const history = getSearchHistory();
+      const combined = [...new Set([...history.map(h => h.toLowerCase()), ...DEFAULT_REGIONS])];
+      setRegions(combined);
+    }
+    updateRegions();
+    window.addEventListener('storage', updateRegions);
+    return () => window.removeEventListener('storage', updateRegions);
+  }, []);
   const [count,     setCount]     = useState(5);
   const [questions, setQuestions] = useState([]);
   const [answers,   setAnswers]   = useState({});   // { index: 'A' }
@@ -74,7 +90,7 @@ export default function Quiz() {
               <label className="label">Region</label>
               <select className="input" value={region} onChange={e => setRegion(e.target.value)}
                 style={{ appearance: 'auto' }}>
-                {REGIONS.map(r => <option key={r} value={r}>{r.charAt(0).toUpperCase()+r.slice(1)}</option>)}
+                {regions.map(r => <option key={r} value={r}>{r.charAt(0).toUpperCase()+r.slice(1)}</option>)}
               </select>
             </div>
             <div style={{ width: 120 }}>

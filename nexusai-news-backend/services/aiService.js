@@ -54,7 +54,13 @@ Headlines:
 ${headlines}`;
 
   const text   = await callGroq(prompt, true);
-  const parsed = JSON.parse(text);
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    console.error('❌ Failed to parse Groq quiz JSON response');
+    return [];
+  }
   return parsed.questions || parsed;
 }
 

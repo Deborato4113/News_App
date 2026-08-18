@@ -47,7 +47,7 @@ async function fetchFromNewsAPI(region, pageSize = 12) {
 // ── Source 2: Google News RSS (fallback) ──────────────────────
 async function fetchFromGoogleRSS(region, limit = 12) {
   // Detect Indian cities → use Indian locale for better regional coverage
-  const indianLocale = /india|mumbai|delhi|bangalore|bengaluru|kolkata|chennai|hyderabad|pune|asansol|durgapur|howrah|siliguri|patna|lucknow|jaipur|surat|ahmedabad|bhopal|nagpur|indore|vadodara|coimbatore|visakhapatnam|rajkot|kerala|maharashtra|gujarat|bengal|odisha|bihar|punjab|haryana|assam/i.test(region);
+  const indianLocale = /india|mumbai|delhi|bangalore|bengaluru|kolkata|chennai|hyderabad|pune|asansol|durgapur|howrah|siliguri|patna|lucknow|jaipur|surat|ahmedabad|bhopal|nagpur|indore|vadodara|coimbatore|visakhapatnam|rajkot|kerala|maharashtra|gujarat|bengal|odisha|bihar|punjab|haryana|assam|jalpaiguri/i.test(region);
 
   const locale = indianLocale
     ? `hl=en-IN&gl=IN&ceid=IN:en`
@@ -103,7 +103,13 @@ ${titles}`;
     response_format: { type: 'json_object' },
   });
 
-  const parsed = JSON.parse(response.choices[0].message.content);
+  let parsed;
+  try {
+    parsed = JSON.parse(response.choices[0].message.content);
+  } catch {
+    console.error('❌ Failed to parse Groq JSON response');
+    return [];
+  }
   return parsed.articles || [];
 }
 
@@ -143,8 +149,13 @@ async function fetchAndEnrichNews(region, pageSize = 12) {
     throw new Error(`No articles found for "${region}".`);
   }
 
-  // Step 3 — Enrich with Groq AI
-  const enriched = await enrichArticles(rawArticles, region);
+  // Step 3 — Enrich with Groq AI (graceful fallback)
+  let enriched = [];
+  try {
+    enriched = await enrichArticles(rawArticles, region);
+  } catch (err) {
+    console.error('❌ AI enrichment failed, using raw articles:', err.message);
+  }
 
   return rawArticles.map((article, i) => {
     const meta = enriched.find(e => e.index === i + 1) || {};

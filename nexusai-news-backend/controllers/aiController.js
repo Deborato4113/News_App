@@ -1,6 +1,6 @@
 const Groq    = require('groq-sdk');
 const Article = require('../models/Article');
-const { askAboutNews, generateQuiz } = require('../services/aiService');
+const { askAboutNews, generateQuiz, translateText } = require('../services/aiService');
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
@@ -42,5 +42,14 @@ exports.summarizeText = async (req, res, next) => {
       max_tokens: 256,
     });
     res.json({ summary: response.choices[0].message.content });
+  } catch (err) { next(err); }
+};
+
+// ── POST /api/ai/translate  { text, targetLang } ───────────────
+exports.translate = async (req, res, next) => {
+  try {
+    const { text, targetLang } = req.body; // validated by zod
+    const translated = await translateText(text, targetLang);
+    res.json({ translated, targetLang });
   } catch (err) { next(err); }
 };

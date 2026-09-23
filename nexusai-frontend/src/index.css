@@ -99,6 +99,15 @@ input, textarea { font-family: inherit; }
 .spinner-lg { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--green); border-radius: 50%; animation: spin 0.7s linear infinite; }
 .spinner-dark { border-color: rgba(0,0,0,0.15); border-top-color: var(--green); }
 @keyframes spin { to { transform: rotate(360deg); } }
+.spin { animation: spin 0.8s linear infinite; }
+
+/* ── Admin dashboard ─────────────────────────────────────────── */
+.admin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.admin-table th { text-align: left; padding: 8px 10px; color: var(--text3); font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid var(--border); }
+.admin-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); color: var(--text2); vertical-align: top; }
+.stat-tile { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.1rem; }
+.stat-tile .stat-value { font-size: 26px; font-weight: 600; color: var(--green); }
+.stat-tile .stat-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
 
 /* ── Divider ─────────────────────────────────────────── */
 .divider { height: 1px; background: var(--border); margin: 1.5rem 0; }

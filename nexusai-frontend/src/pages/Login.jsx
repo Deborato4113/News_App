@@ -4,11 +4,12 @@ import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
 export default function Login() {
-  const { login } = useAuth();
+  const { login, loginWithGoogle, firebaseEnabled } = useAuth();
   const navigate  = useNavigate();
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -22,6 +23,19 @@ export default function Login() {
       setError(err.response?.data?.message || 'Login failed. Try again.');
     }
     setLoading(false);
+  }
+
+  async function handleGoogle() {
+    setError('');
+    setGoogleLoading(true);
+    try {
+      await loginWithGoogle();
+      toast.success('Welcome back!');
+      navigate('/');
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Google sign-in failed.');
+    }
+    setGoogleLoading(false);
   }
 
   return (
@@ -46,11 +60,28 @@ export default function Login() {
               value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
               required />
           </div>
-          <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', marginTop: 8 }}
+          <div style={{ textAlign: 'right', marginBottom: 12 }}>
+            <Link to="/forgot-password" style={{ fontSize: 13, color: 'var(--text2)' }}>Forgot password?</Link>
+          </div>
+          <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}
             type="submit" disabled={loading}>
             {loading ? <div className="spinner" /> : 'Sign in'}
           </button>
         </form>
+
+        {firebaseEnabled && (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '1.1rem 0' }}>
+              <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+              <span style={{ fontSize: 12, color: 'var(--text3)' }}>or</span>
+              <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+            </div>
+            <button type="button" className="btn btn-ghost" onClick={handleGoogle} disabled={googleLoading}
+              style={{ width: '100%', justifyContent: 'center' }}>
+              {googleLoading ? <div className="spinner" /> : 'Continue with Google'}
+            </button>
+          </>
+        )}
 
         <div className="auth-footer">
           Don't have an account? <Link to="/signup">Sign up</Link>

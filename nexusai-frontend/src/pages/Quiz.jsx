@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BrainCircuit, CheckCircle, XCircle, RotateCcw, Trophy } from 'lucide-react';
+import { BrainCircuit, CheckCircle, XCircle, RotateCcw, Trophy, Flame, Target, History } from 'lucide-react';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
 
@@ -29,6 +29,32 @@ export default function Quiz() {
   const [submitted, setSubmitted] = useState(false);
   const [loading,   setLoading]   = useState(false);
 
+  const [stats, setStats]         = useState(null);
+  const [recording, setRecording] = useState(false);
+
+  // Plain (non-effect) function, reused after a quiz submission to refresh
+  // the panel with the new attempt included.
+  async function loadStats() {
+    try {
+      const r = await api.get('/quiz/stats');
+      setStats(r.data);
+    } catch { /* stats are a nice-to-have — fail silently */ }
+  }
+
+  // Initial load on mount — inlined rather than calling loadStats()
+  // directly so a cancelled-unmount guard is in place before the first
+  // setState.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await api.get('/quiz/stats');
+        if (!cancelled) setStats(r.data);
+      } catch { /* stats are a nice-to-have — fail silently */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   async function generateQuiz() {
     setLoading(true);
     setQuestions([]);
@@ -49,12 +75,22 @@ export default function Quiz() {
     setAnswers(a => ({ ...a, [idx]: letter }));
   }
 
-  function submit() {
+  async function submit() {
     if (Object.keys(answers).length < questions.length) {
       toast.error('Please answer all questions first!');
       return;
     }
     setSubmitted(true);
+
+    const finalScore = questions.filter((q, i) => answers[i] === q.answer).length;
+    setRecording(true);
+    try {
+      await api.post('/quiz/attempts', { region, score: finalScore, total: questions.length });
+      loadStats(); // refresh streak/best-score panel with this attempt included
+    } catch {
+      // Recording the attempt failing shouldn't block seeing the score.
+    }
+    setRecording(false);
   }
 
   function reset() {
@@ -81,6 +117,36 @@ export default function Quiz() {
           Test your knowledge with AI-generated questions from today's headlines.
         </p>
       </div>
+
+      {/* Stats / streak panel */}
+      {stats && stats.totalAttempts > 0 && !loading && questions.length === 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10, marginBottom: '1.5rem' }}>
+          <div className="card" style={{ padding: '0.9rem 1rem' }}>
+            <div style={{ fontSize: 11, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Streak</div>
+            <div style={{ fontSize: 22, fontWeight: 600, color: 'var(--amber)', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <Flame size={16} /> {stats.currentStreak}d
+            </div>
+          </div>
+          <div className="card" style={{ padding: '0.9rem 1rem' }}>
+            <div style={{ fontSize: 11, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Best</div>
+            <div style={{ fontSize: 22, fontWeight: 600, color: 'var(--green)', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <Trophy size={16} /> {stats.bestScorePct}%
+            </div>
+          </div>
+          <div className="card" style={{ padding: '0.9rem 1rem' }}>
+            <div style={{ fontSize: 11, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Average</div>
+            <div style={{ fontSize: 22, fontWeight: 600, color: 'var(--blue)', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <Target size={16} /> {stats.averagePct}%
+            </div>
+          </div>
+          <div className="card" style={{ padding: '0.9rem 1rem' }}>
+            <div style={{ fontSize: 11, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Attempts</div>
+            <div style={{ fontSize: 22, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+              <History size={16} /> {stats.totalAttempts}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Controls */}
       {!loading && questions.length === 0 && (
@@ -129,6 +195,7 @@ export default function Quiz() {
           <p style={{ color: 'var(--text2)', fontSize: 14, marginTop: 4 }}>
             {pct >= 80 ? '🎉 Excellent! You\'re well informed.' : pct >= 50 ? '👍 Good job, keep reading!' : '📰 Time to catch up on the news!'}
           </p>
+          {recording && <p style={{ fontSize: 12, color: 'var(--text3)', marginTop: 8 }}>Saving your result…</p>}
           <button className="btn btn-ghost" style={{ marginTop: '1.25rem' }} onClick={reset}>
             <RotateCcw size={14} /> Try another quiz
           </button>

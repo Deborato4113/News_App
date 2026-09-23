@@ -3,18 +3,31 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
+// Mirrors the backend's zod rule (schemas/authSchemas.js) so the user sees
+// a matching error here instead of submitting and getting rejected by the
+// server with a rule they weren't told about.
+function passwordError(pw) {
+  if (pw.length < 8) return 'Password must be at least 8 characters.';
+  if (!/[a-z]/.test(pw)) return 'Password must contain a lowercase letter.';
+  if (!/[A-Z]/.test(pw)) return 'Password must contain an uppercase letter.';
+  if (!/[0-9]/.test(pw)) return 'Password must contain a number.';
+  return null;
+}
+
 export default function Signup() {
-  const { signup } = useAuth();
+  const { signup, loginWithGoogle, firebaseEnabled } = useAuth();
   const navigate   = useNavigate();
   const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
     if (form.password !== form.confirm) { setError('Passwords do not match.'); return; }
-    if (form.password.length < 6)      { setError('Password must be at least 6 characters.'); return; }
+    const pwErr = passwordError(form.password);
+    if (pwErr) { setError(pwErr); return; }
     setLoading(true);
     try {
       await signup(form.name, form.email, form.password);
@@ -24,6 +37,19 @@ export default function Signup() {
       setError(err.response?.data?.message || 'Sign up failed. Try again.');
     }
     setLoading(false);
+  }
+
+  async function handleGoogle() {
+    setError('');
+    setGoogleLoading(true);
+    try {
+      await loginWithGoogle();
+      toast.success('Account ready! Welcome 🎉');
+      navigate('/');
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Google sign-in failed.');
+    }
+    setGoogleLoading(false);
   }
 
   const f = (k) => e => setForm(p => ({ ...p, [k]: e.target.value }));
@@ -40,7 +66,7 @@ export default function Signup() {
         <form onSubmit={handleSubmit}>
           <div className="auth-field">
             <label className="label">Full name</label>
-            <input className="input" placeholder="Deborato Chaudhury"
+            <input className="input" placeholder="Full name"
               value={form.name} onChange={f('name')} required autoFocus />
           </div>
           <div className="auth-field">
@@ -50,7 +76,7 @@ export default function Signup() {
           </div>
           <div className="auth-field">
             <label className="label">Password</label>
-            <input className="input" type="password" placeholder="Min 6 characters"
+            <input className="input" type="password" placeholder="8+ chars, upper, lower, number"
               value={form.password} onChange={f('password')} required />
           </div>
           <div className="auth-field">
@@ -63,6 +89,20 @@ export default function Signup() {
             {loading ? <div className="spinner" /> : 'Create account'}
           </button>
         </form>
+
+        {firebaseEnabled && (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '1.1rem 0' }}>
+              <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+              <span style={{ fontSize: 12, color: 'var(--text3)' }}>or</span>
+              <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+            </div>
+            <button type="button" className="btn btn-ghost" onClick={handleGoogle} disabled={googleLoading}
+              style={{ width: '100%', justifyContent: 'center' }}>
+              {googleLoading ? <div className="spinner" /> : 'Continue with Google'}
+            </button>
+          </>
+        )}
 
         <div className="auth-footer">
           Already have an account? <Link to="/login">Sign in</Link>

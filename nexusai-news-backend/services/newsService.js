@@ -1,6 +1,8 @@
 const axios     = require('axios');
 const Parser    = require('rss-parser');
 const Groq      = require('groq-sdk');
+const Article   = require('../models/Article');
+const logger    = require('../utils/logger');
 
 const groq   = new Groq({ apiKey: process.env.GROQ_API_KEY });
 const parser = new Parser({ timeout: 10000 });
@@ -73,6 +75,11 @@ function extractSource(title = '') {
 }
 
 // ── AI enrichment via Groq ────────────────────────────────────
+// Adds summary/category/sentiment (as before) plus two moderation-facing
+// fields: biasLevel (how one-sided the framing/source reads) and an
+// optional factCheckNote — a short caution when a claim looks like it
+// needs independent verification (rumor, single-source, unconfirmed
+// figures, etc). Both are best-effort AI judgments, not authoritative.
 async function enrichArticles(articles, region) {
   const titles = articles
     .map((a, i) => `${i + 1}. ${a.title}: ${a.description || ''}`)
@@ -87,10 +94,16 @@ For each article below, return a JSON object with an "articles" array (one objec
       "index": 1,
       "summary": "2-3 sentence plain-English summary",
       "category": "Politics|Business|Technology|Sports|Weather|Health|General",
-      "sentiment": "pos|neg|neu"
+      "sentiment": "pos|neg|neu",
+      "biasLevel": "low|medium|high",
+      "factCheckNote": "one short sentence flagging an unverified or one-sided claim, or an empty string if the article reads as balanced and well-sourced"
     }
   ]
 }
+
+Guidance:
+- biasLevel "high" means loaded language, one-sided framing, or a clear editorial slant presented as fact.
+- factCheckNote should stay empty unless something genuinely looks unverified, rumor-based, or single-sourced.
 
 Articles:
 ${titles}`;
@@ -107,7 +120,7 @@ ${titles}`;
   try {
     parsed = JSON.parse(response.choices[0].message.content);
   } catch {
-    console.error('❌ Failed to parse Groq JSON response');
+    logger.error('Failed to parse Groq JSON response');
     return [];
   }
   return parsed.articles || [];
@@ -123,14 +136,14 @@ async function fetchAndEnrichNews(region, pageSize = 12) {
     const newsApiResults = await fetchFromNewsAPI(region, pageSize);
 
     if (newsApiResults.length > 0 && isRelevant(newsApiResults, region)) {
-      console.log(`✅ NewsAPI: ${newsApiResults.length} relevant articles for "${region}"`);
+      logger.info(`NewsAPI: ${newsApiResults.length} relevant articles for "${region}"`);
       rawArticles = newsApiResults;
       usedSource  = 'newsapi';
     } else {
-      console.log(`⚠️  NewsAPI: results not relevant for "${region}" — falling back to Google News RSS`);
+      logger.warn(`NewsAPI: results not relevant for "${region}" — falling back to Google News RSS`);
     }
   } catch (err) {
-    console.log(`⚠️  NewsAPI failed (${err.message}) — falling back to Google News RSS`);
+    logger.warn(`NewsAPI failed (${err.message}) — falling back to Google News RSS`);
   }
 
   // Step 2 — Fallback to Google News RSS
@@ -138,9 +151,9 @@ async function fetchAndEnrichNews(region, pageSize = 12) {
     try {
       rawArticles = await fetchFromGoogleRSS(region, pageSize);
       usedSource  = 'google-rss';
-      console.log(`✅ Google RSS: ${rawArticles.length} articles for "${region}"`);
+      logger.info(`Google RSS: ${rawArticles.length} articles for "${region}"`);
     } catch (err) {
-      console.log(`❌ Google RSS also failed: ${err.message}`);
+      logger.error(`Google RSS also failed: ${err.message}`);
       throw new Error(`Could not fetch news for "${region}" from any source.`);
     }
   }
@@ -154,24 +167,45 @@ async function fetchAndEnrichNews(region, pageSize = 12) {
   try {
     enriched = await enrichArticles(rawArticles, region);
   } catch (err) {
-    console.error('❌ AI enrichment failed, using raw articles:', err.message);
+    logger.error({ err }, 'AI enrichment failed, using raw articles');
   }
 
   return rawArticles.map((article, i) => {
     const meta = enriched.find(e => e.index === i + 1) || {};
     return {
-      title:       article.title,
-      description: article.description,
-      summary:     meta.summary   || article.description,
-      url:         article.url,
-      source:      article.source,
-      region:      region.toLowerCase(),
-      category:    meta.category  || 'General',
-      sentiment:   meta.sentiment || 'neu',
-      publishedAt: article.publishedAt,
-      fetchSource: usedSource,   // 'newsapi' or 'google-rss'
+      title:         article.title,
+      description:   article.description,
+      summary:       meta.summary   || article.description,
+      url:           article.url,
+      source:        article.source,
+      region:        region.toLowerCase(),
+      category:      meta.category  || 'General',
+      sentiment:     meta.sentiment || 'neu',
+      biasLevel:     ['low', 'medium', 'high'].includes(meta.biasLevel) ? meta.biasLevel : 'low',
+      factCheckNote: typeof meta.factCheckNote === 'string' ? meta.factCheckNote : '',
+      publishedAt:   article.publishedAt,
+      fetchSource:   usedSource,   // 'newsapi' or 'google-rss'
     };
   });
 }
 
-module.exports = { fetchAndEnrichNews };
+// ── Shared upsert helper ────────────────────────────────────────
+// Used by both the regular news fetch flow and the admin bulk-refresh
+// flow, so the "upsert by title+region, skip duplicates" logic only
+// lives in one place.
+async function saveArticles(articles) {
+  const saved = [];
+  for (const article of articles) {
+    try {
+      const doc = await Article.findOneAndUpdate(
+        { title: article.title, region: article.region },
+        { ...article, fetchedAt: new Date() },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+      saved.push(doc);
+    } catch { /* duplicate — skip */ }
+  }
+  return saved;
+}
+
+module.exports = { fetchAndEnrichNews, saveArticles };

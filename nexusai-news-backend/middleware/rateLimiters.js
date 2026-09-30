@@ -1,11 +1,18 @@
 const rateLimit = require('express-rate-limit');
 
+// Integration tests fire many requests back-to-back from the same IP within
+// the same window, which would otherwise trip these limiters and make tests
+// flaky/order-dependent. `skip` is an express-rate-limit option meant for
+// exactly this — the limiter still exists in test env, it just never blocks.
+const skipInTests = () => process.env.NODE_ENV === 'test';
+
 // Applied to every /api/* request as a broad backstop.
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 min
   max: 300,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: skipInTests,
   message: { message: 'Too many requests. Please try again later.' },
 });
 
@@ -16,6 +23,7 @@ const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: true, // only counts failed attempts against the limit
+  skip: skipInTests,
   message: { message: 'Too many login attempts. Please try again in 15 minutes.' },
 });
 
@@ -26,6 +34,7 @@ const aiLimiter = rateLimit({
   max: 20,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: skipInTests,
   message: { message: 'Too many AI requests. Please slow down and try again shortly.' },
 });
 

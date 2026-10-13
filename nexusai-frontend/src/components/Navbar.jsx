@@ -1,6 +1,6 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, Newspaper, BrainCircuit, ShieldCheck, Star, Bookmark, Search } from 'lucide-react';
+import { LogOut, Newspaper, BrainCircuit, ShieldCheck, Star, Bookmark, Search, Bot } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function Navbar() {
@@ -53,6 +53,10 @@ export default function Navbar() {
             <Link to="/quiz" className={`btn btn-ghost btn-sm${pathname==='/quiz'?' active':''}`}
               style={pathname==='/quiz'?{color:'var(--green)',borderColor:'var(--green)'}:{}}>
               <BrainCircuit size={14} /> Quiz
+            </Link>
+            <Link to="/ask" className={`btn btn-ghost btn-sm${pathname==='/ask'?' active':''}`}
+              style={pathname==='/ask'?{color:'var(--green)',borderColor:'var(--green)'}:{}}>
+              <Bot size={14} /> Ask AI
             </Link>
             <Link to="/feed" title="My Feed" style={iconLinkStyle('/feed')}>
               <Star size={14} />

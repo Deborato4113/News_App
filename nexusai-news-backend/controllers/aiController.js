@@ -37,7 +37,7 @@ exports.summarizeText = async (req, res, next) => {
     if (!text) return res.status(400).json({ message: 'text is required' });
 
     const response = await groq.chat.completions.create({
-      model:    'llama-3.1-8b-instant',
+      model:    process.env.NEWS_AI_MODEL || 'openai/gpt-oss-20b',
       messages: [{ role: 'user', content: `Summarize this news article in 2-3 sentences:\n\n${text}` }],
       max_tokens: 256,
     });

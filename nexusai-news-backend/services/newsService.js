@@ -109,7 +109,7 @@ Articles:
 ${titles}`;
 
   const response = await groq.chat.completions.create({
-    model:           'llama-3.1-8b-instant',
+    model:           process.env.NEWS_AI_MODEL || 'openai/gpt-oss-20b',
     messages:        [{ role: 'user', content: prompt }],
     temperature:     0.3,
     max_tokens:      2048,

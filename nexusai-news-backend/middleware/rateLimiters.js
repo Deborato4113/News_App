@@ -38,4 +38,18 @@ const aiLimiter = rateLimit({
   message: { message: 'Too many AI requests. Please slow down and try again shortly.' },
 });
 
-module.exports = { generalLimiter, authLimiter, aiLimiter };
+// The Ask NexusAI agent: one question can trigger up to ~5 model calls plus
+// tool work, so it gets its own, much tighter budget. Keyed per logged-in
+// user (the route runs `auth` first) so one user can't burn the quota, and
+// a shared IP (campus wifi) doesn't throttle everyone together.
+const agentLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000, // 10 min
+  max: 8,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.user?.id || 'anonymous',
+  skip: skipInTests,
+  message: { message: 'You are asking too fast. Please wait a few minutes before asking NexusAI again.' },
+});
+
+module.exports = { generalLimiter, authLimiter, aiLimiter, agentLimiter };

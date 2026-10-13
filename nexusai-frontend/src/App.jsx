@@ -13,6 +13,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import SavedArticles from './pages/SavedArticles';
 import SearchPage from './pages/SearchPage';
 import MyFeed from './pages/MyFeed';
+import AskNexus from './pages/AskNexus';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -37,6 +38,7 @@ function AppRoutes() {
         <Route path="/saved"           element={<ProtectedRoute><SavedArticles /></ProtectedRoute>} />
         <Route path="/search"          element={<ProtectedRoute><SearchPage /></ProtectedRoute>} />
         <Route path="/feed"            element={<ProtectedRoute><MyFeed /></ProtectedRoute>} />
+        <Route path="/ask"             element={<ProtectedRoute><AskNexus /></ProtectedRoute>} />
         <Route path="/admin"           element={<AdminRoute><AdminDashboard /></AdminRoute>} />
         <Route path="/login"           element={<Login />} />
         <Route path="/signup"          element={<Signup />} />

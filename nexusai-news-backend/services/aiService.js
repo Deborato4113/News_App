@@ -66,13 +66,22 @@ Question: ${question}`;
   return await callGroq(prompt, { maxTokens: 512 });
 }
 
-async function generateQuiz(articles, region, count = 5) {
+const DIFFICULTY_GUIDE = {
+  easy:   'Easy: test recall of the main facts stated in the headlines.',
+  medium: 'Medium: mix recall with simple "why/what happened next" understanding.',
+  hard:   'Hard: require connecting details across headlines; make wrong options plausible.',
+};
+
+// `difficulty` is optional and defaults to 'medium', so existing callers
+// (aiController's /api/ai/quiz) behave exactly as before.
+async function generateQuiz(articles, region, count = 5, difficulty = 'medium') {
   const headlines = articles
     .slice(0, 8)
     .map(a => `- ${a.title}: ${a.summary || a.description}`)
     .join('\n');
 
   const prompt = `Generate ${count} multiple-choice quiz questions based on these current affairs headlines for ${region}.
+${DIFFICULTY_GUIDE[difficulty] || DIFFICULTY_GUIDE.medium}
 
 Return ONLY a valid JSON object:
 {

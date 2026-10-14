@@ -1,5 +1,5 @@
 // Model fallback. The Groq client is replaced by a fake, so no network.
-const { createLlm, configuredModels, isFallbackWorthy } = require('../../services/agentLlm');
+const { createLlm, configuredModels, isFallbackWorthy, flattenToolMessages } = require('../../services/agentLlm');
 
 const ok = (text) => ({ choices: [{ message: { role: 'assistant', content: text } }], usage: { total_tokens: 7 } });
 const apiError = (status, headers = {}) => Object.assign(new Error(`HTTP ${status}`), { status, headers });
@@ -151,6 +151,35 @@ describe('createLlm', () => {
     expect(out.message.content).toBe('final answer');
     expect(seen).toHaveLength(2);
     expect(seen[1]).not.toHaveProperty('tools');
+  });
+
+  it('if the model STILL calls a tool with no tools sent, the last try shows tool results as plain text', async () => {
+    const seen = [];
+    const history = [
+      { role: 'system', content: 'sys' },
+      { role: 'user', content: 'question' },
+      { role: 'assistant', content: null, tool_calls: [{ id: 'c1', type: 'function', function: { name: 'search_news', arguments: '{}' } }] },
+      { role: 'tool', tool_call_id: 'c1', content: '{"count":1}' },
+    ];
+    const getClient = () => ({ chat: { completions: { create: async (r) => {
+      seen.push(r);
+      if (r.messages.some((m) => m.role === 'tool' || m.tool_calls)) throw toolFail();
+      return ok('final answer');
+    } } } });
+    const out = await createLlm({ getClient, getModels: () => ['main'] }).chat({ messages: history, tools: [{ type: 'function' }], toolChoice: 'none' });
+    expect(out.message.content).toBe('final answer');
+    expect(seen).toHaveLength(3);
+    expect(seen[2].messages.at(-1)).toEqual({ role: 'user', content: 'Result of search_news: {"count":1}' });
+  });
+
+  it('flattenToolMessages merges consecutive tool results and keeps normal messages', () => {
+    const out = flattenToolMessages([
+      { role: 'user', content: 'q' },
+      { role: 'assistant', content: null, tool_calls: [{ id: 'a', function: { name: 'x' } }, { id: 'b', function: { name: 'y' } }] },
+      { role: 'tool', tool_call_id: 'a', content: '1' },
+      { role: 'tool', tool_call_id: 'b', content: '2' },
+    ]);
+    expect(out).toEqual([{ role: 'user', content: 'q' }, { role: 'user', content: 'Result of x: 1\nResult of y: 2' }]);
   });
 
   it('a malformed tool call from one model falls back to the next model', async () => {

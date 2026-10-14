@@ -1,0 +1,464 @@
+{
+  "meta": {
+    "date": "2026-10-14",
+    "model": "openai/gpt-oss-20b"
+  },
+  "summary": {
+    "total": 20,
+    "scored": 19,
+    "quotaLimited": 1,
+    "errors": 0,
+    "toolSelectionPct": 95,
+    "answeredPct": 100,
+    "passPct": 95,
+    "citationPct": 100,
+    "citationCases": 10,
+    "avgDurationMs": 2169,
+    "medianDurationMs": 1639,
+    "avgSteps": 1.3,
+    "avgTokens": 3489,
+    "droppedSources": 1,
+    "byCategory": {
+      "news": {
+        "total": 6,
+        "toolsOk": 6,
+        "pct": 100
+      },
+      "multi-tool": {
+        "total": 1,
+        "toolsOk": 1,
+        "pct": 100
+      },
+      "quiz history": {
+        "total": 3,
+        "toolsOk": 3,
+        "pct": 100
+      },
+      "quiz": {
+        "total": 2,
+        "toolsOk": 2,
+        "pct": 100
+      },
+      "compare": {
+        "total": 2,
+        "toolsOk": 2,
+        "pct": 100
+      },
+      "briefing": {
+        "total": 2,
+        "toolsOk": 2,
+        "pct": 100
+      },
+      "bookmark": {
+        "total": 1,
+        "toolsOk": 0,
+        "pct": 0
+      },
+      "small talk": {
+        "total": 2,
+        "toolsOk": 2,
+        "pct": 100
+      }
+    }
+  },
+  "rows": [
+    {
+      "id": "news-01",
+      "category": "news",
+      "toolsOk": true,
+      "answered": true,
+      "citationApplicable": true,
+      "cited": true,
+      "pass": true,
+      "toolsUsed": [
+        "search_news"
+      ],
+      "steps": 1,
+      "durationMs": 1613,
+      "tokens": 2937,
+      "droppedSources": 0,
+      "models": [
+        "openai/gpt-oss-20b"
+      ],
+      "error": null
+    },
+    {
+      "id": "news-02",
+      "category": "news",
+      "toolsOk": true,
+      "answered": true,
+      "citationApplicable": true,
+      "cited": true,
+      "pass": true,
+      "toolsUsed": [
+        "search_news"
+      ],
+      "steps": 1,
+      "durationMs": 1299,
+      "tokens": 2924,
+      "droppedSources": 0,
+      "models": [
+        "openai/gpt-oss-20b"
+      ],
+      "error": null
+    },
+    {
+      "id": "news-03",
+      "category": "news",
+      "toolsOk": true,
+      "answered": true,
+      "citationApplicable": true,
+      "cited": true,
+      "pass": true,
+      "toolsUsed": [
+        "search_news"
+      ],
+      "steps": 2,
+      "durationMs": 2119,
+      "tokens": 4349,
+      "droppedSources": 0,
+      "models": [
+        "openai/gpt-oss-20b"
+      ],
+      "error": null
+    },
+    {
+      "id": "news-04",
+      "category": "news",
+      "toolsOk": true,
+      "answered": true,
+      "citationApplicable": true,
+      "cited": true,
+      "pass": true,
+      "toolsUsed": [
+        "search_news"
+      ],
+      "steps": 4,
+      "durationMs": 5196,
+      "tokens": 9618,
+      "droppedSources": 0,
+      "models": [
+        "openai/gpt-oss-20b",
+        "openai/gpt-oss-120b"
+      ],
+      "error": null
+    },
+    {
+      "id": "news-05",
+      "category": "news",
+      "toolsOk": true,
+      "answered": true,
+      "citationApplicable": true,
+      "cited": true,
+      "pass": true,
+      "toolsUsed": [
+        "search_news"
+      ],
+      "steps": 2,
+      "durationMs": 2313,
+      "tokens": 4365,
+      "droppedSources": 0,
+      "models": [
+        "openai/gpt-oss-20b"
+      ],
+      "error": null
+    },
+    {
+      "id": "news-06",
+      "category": "news",
+      "toolsOk": true,
+      "answered": true,
+      "citationApplicable": true,
+      "cited": true,
+      "pass": true,
+      "toolsUsed": [
+        "search_news",
+        "get_article"
+      ],
+      "steps": 3,
+      "durationMs": 3282,
+      "tokens": 6404,
+      "droppedSources": 0,
+      "models": [
+        "openai/gpt-oss-20b",
+        "openai/gpt-oss-120b"
+      ],
+      "error": null
+    },
+    {
+      "quotaLimited": true,
+      "id": "news-07",
+      "category": "news",
+      "toolsOk": false,
+      "answered": false,
+      "citationApplicable": false,
+      "cited": false,
+      "pass": false,
+      "toolsUsed": [],
+      "steps": 0,
+      "durationMs": 0,
+      "tokens": 0,
+      "droppedSources": 0,
+      "models": [],
+      "error": "429 {\"error\":{\"message\":\"Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01kv50cvb7e53911xjwxdstf0n` service tier `on_demand` on tokens per day (TPD): Limit 200000, Used 197525,"
+    },
+    {
+      "id": "multi-01",
+      "category": "multi-tool",
+      "toolsOk": true,
+      "answered": true,
+      "citationApplicable": true,
+      "cited": true,
+      "pass": true,
+      "toolsUsed": [
+        "search_news",
+        "get_quiz_history"
+      ],
+      "steps": 2,
+      "durationMs": 2725,
+      "tokens": 4753,
+      "droppedSources": 0,
+      "models": [
+        "openai/gpt-oss-20b"
+      ],
+      "error": null
+    },
+    {
+      "id": "history-01",
+      "category": "quiz history",
+      "toolsOk": true,
+      "answered": true,
+      "citationApplicable": false,
+      "cited": false,
+      "pass": true,
+      "toolsUsed": [
+        "get_quiz_history"
+      ],
+      "steps": 1,
+      "durationMs": 1410,
+      "tokens": 2695,
+      "droppedSources": 0,
+      "models": [
+        "openai/gpt-oss-20b"
+      ],
+      "error": null
+    },
+    {
+      "id": "history-02",
+      "category": "quiz history",
+      "toolsOk": true,
+      "answered": true,
+      "citationApplicable": false,
+      "cited": false,
+      "pass": true,
+      "toolsUsed": [
+        "get_quiz_history"
+      ],
+      "steps": 1,
+      "durationMs": 1293,
+      "tokens": 2538,
+      "droppedSources": 1,
+      "models": [
+        "openai/gpt-oss-20b"
+      ],
+      "error": null
+    },
+    {
+      "id": "history-03",
+      "category": "quiz history",
+      "toolsOk": true,
+      "answered": true,
+      "citationApplicable": false,
+      "cited": false,
+      "pass": true,
+      "toolsUsed": [
+        "get_quiz_history"
+      ],
+      "steps": 1,
+      "durationMs": 1639,
+      "tokens": 2825,
+      "droppedSources": 0,
+      "models": [
+        "openai/gpt-oss-20b"
+      ],
+      "error": null
+    },
+    {
+      "id": "quiz-01",
+      "category": "quiz",
+      "toolsOk": true,
+      "answered": true,
+      "citationApplicable": false,
+      "cited": false,
+      "pass": true,
+      "toolsUsed": [
+        "generate_quiz"
+      ],
+      "steps": 1,
+      "durationMs": 4638,
+      "tokens": 2699,
+      "droppedSources": 0,
+      "models": [
+        "openai/gpt-oss-20b"
+      ],
+      "error": null
+    },
+    {
+      "id": "quiz-02",
+      "category": "quiz",
+      "toolsOk": true,
+      "answered": true,
+      "citationApplicable": false,
+      "cited": false,
+      "pass": true,
+      "toolsUsed": [
+        "generate_quiz"
+      ],
+      "steps": 1,
+      "durationMs": 4236,
+      "tokens": 2633,
+      "droppedSources": 0,
+      "models": [
+        "openai/gpt-oss-20b",
+        "openai/gpt-oss-120b"
+      ],
+      "error": null
+    },
+    {
+      "id": "compare-01",
+      "category": "compare",
+      "toolsOk": true,
+      "answered": true,
+      "citationApplicable": true,
+      "cited": true,
+      "pass": true,
+      "toolsUsed": [
+        "compare_regions"
+      ],
+      "steps": 1,
+      "durationMs": 1373,
+      "tokens": 3182,
+      "droppedSources": 0,
+      "models": [
+        "openai/gpt-oss-20b"
+      ],
+      "error": null
+    },
+    {
+      "id": "compare-02",
+      "category": "compare",
+      "toolsOk": true,
+      "answered": true,
+      "citationApplicable": false,
+      "cited": false,
+      "pass": true,
+      "toolsUsed": [
+        "compare_regions"
+      ],
+      "steps": 1,
+      "durationMs": 1449,
+      "tokens": 2597,
+      "droppedSources": 0,
+      "models": [
+        "openai/gpt-oss-20b"
+      ],
+      "error": null
+    },
+    {
+      "id": "briefing-01",
+      "category": "briefing",
+      "toolsOk": true,
+      "answered": true,
+      "citationApplicable": true,
+      "cited": true,
+      "pass": true,
+      "toolsUsed": [
+        "daily_briefing"
+      ],
+      "steps": 1,
+      "durationMs": 1316,
+      "tokens": 3040,
+      "droppedSources": 0,
+      "models": [
+        "openai/gpt-oss-20b"
+      ],
+      "error": null
+    },
+    {
+      "id": "briefing-02",
+      "category": "briefing",
+      "toolsOk": true,
+      "answered": true,
+      "citationApplicable": true,
+      "cited": true,
+      "pass": true,
+      "toolsUsed": [
+        "daily_briefing"
+      ],
+      "steps": 1,
+      "durationMs": 1944,
+      "tokens": 3141,
+      "droppedSources": 0,
+      "models": [
+        "openai/gpt-oss-20b"
+      ],
+      "error": null
+    },
+    {
+      "id": "save-01",
+      "category": "bookmark",
+      "toolsOk": false,
+      "answered": true,
+      "citationApplicable": false,
+      "cited": true,
+      "pass": false,
+      "toolsUsed": [
+        "search_news"
+      ],
+      "steps": 1,
+      "durationMs": 1704,
+      "tokens": 2994,
+      "droppedSources": 0,
+      "models": [
+        "openai/gpt-oss-20b"
+      ],
+      "error": null
+    },
+    {
+      "id": "chat-01",
+      "category": "small talk",
+      "toolsOk": true,
+      "answered": true,
+      "citationApplicable": false,
+      "cited": false,
+      "pass": true,
+      "toolsUsed": [],
+      "steps": 0,
+      "durationMs": 879,
+      "tokens": 1312,
+      "droppedSources": 0,
+      "models": [
+        "openai/gpt-oss-20b"
+      ],
+      "error": null
+    },
+    {
+      "id": "chat-02",
+      "category": "small talk",
+      "toolsOk": true,
+      "answered": true,
+      "citationApplicable": false,
+      "cited": false,
+      "pass": true,
+      "toolsUsed": [],
+      "steps": 0,
+      "durationMs": 784,
+      "tokens": 1284,
+      "droppedSources": 0,
+      "models": [
+        "openai/gpt-oss-20b"
+      ],
+      "error": null
+    }
+  ]
+}

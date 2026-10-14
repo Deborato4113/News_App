@@ -4,6 +4,7 @@
 //   npm run eval -- --limit=5          just the first 5 (a quick check)
 //   npm run eval -- --delay=30000      pause 30s between questions
 //   npm run eval -- --user=me@x.com    run as this user (default: first user)
+//   npm run eval -- --live             allow live news fetching (default: cached articles only, so every run sees the same data)
 //   npm run eval -- --retry-wait=90000 wait this long, then retry questions refused for quota
 //
 // It calls the live AI, so it needs GROQ_API_KEY and MONGODB_URI in .env and
@@ -19,6 +20,16 @@ const mongoose = require('mongoose');
 
 const { CASES } = require('./cases');
 const { runCases, summarize, toMarkdown } = require('./scoring');
+
+// Default for evals: no live news fetching. Questions are answered from the
+// articles already in the database, so results don't change with what NewsAPI
+// returns today, and no tokens are spent on AI enrichment.
+const OFFLINE_NEWS = {
+  newsService: {
+    fetchAndEnrichNews: async () => { throw new Error('live fetch disabled in evaluation'); },
+    saveArticles: async () => {},
+  },
+};
 
 function argOf(name, fallback) {
   const hit = process.argv.find((a) => a.startsWith(`--${name}=`));
@@ -36,6 +47,7 @@ async function main() {
   const delayMs = Number(argOf('delay', 20000));
   const limit = Number(argOf('limit', CASES.length));
   const email = argOf('user', '');
+  const live = process.argv.includes('--live');
 
   await mongoose.connect(process.env.MONGODB_URI);
   const user = email ? await User.findOne({ email: email.toLowerCase() }) : await User.findOne({}).sort({ createdAt: 1 });
@@ -49,7 +61,7 @@ async function main() {
     retryQuotaAfterMs: Number(argOf('retry-wait', 90000)), // questions refused only for quota get one more try
     runOne: (testCase) => runAgent({
       question: testCase.question,
-      tools: createTools({ userId: String(user._id) }),
+      tools: createTools({ userId: String(user._id), deps: live ? {} : OFFLINE_NEWS }),
       llm: agentLlm,
       logger: quiet,
     }),

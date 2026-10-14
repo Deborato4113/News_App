@@ -49,6 +49,30 @@ function isToolUseFailed(err) {
   return err?.status === 400 && /tool_use_failed|tool choice is none/i.test(text);
 }
 
+// Turns a conversation that contains tool calls into plain text: the tool
+// results become a user message ("Result of search_news: ..."). Used as a last
+// resort in the "answer now, no more tools" round: with no tool messages in
+// sight, the model has nothing left to try to call.
+function flattenToolMessages(messages) {
+  const nameOf = new Map(); // tool_call_id -> tool name
+  for (const m of messages) for (const c of m.tool_calls || []) nameOf.set(c.id, c.function?.name || 'tool');
+
+  const out = [];
+  for (const m of messages) {
+    if (m.role === 'tool') {
+      const text = `Result of ${nameOf.get(m.tool_call_id) || 'a tool'}: ${m.content}`;
+      const last = out[out.length - 1];
+      if (last?.role === 'user' && last.flattened) last.content += `\n${text}`;
+      else out.push({ role: 'user', content: text, flattened: true });
+    } else if (m.role === 'assistant' && m.tool_calls?.length) {
+      if (m.content) out.push({ role: 'assistant', content: m.content });
+    } else {
+      out.push(m);
+    }
+  }
+  return out.map(({ flattened, ...rest }) => rest);
+}
+
 // Builds an llm object. `getClient` and `now` are injectable so tests can
 // use a fake client and a fake clock.
 function createLlm({ getClient, getModels = configuredModels, now = Date.now, onFallback = () => {} }) {
@@ -60,8 +84,16 @@ function createLlm({ getClient, getModels = configuredModels, now = Date.now, on
     } catch (err) {
       // "No more tools" round and the model still tried one: ask again with the
       // tools removed entirely, so it can only write the final answer.
-      if (request.toolChoice === 'none' && request.tools?.length && isToolUseFailed(err)) {
-        return callOnce(model, { ...request, tools: [] });
+      if (request.toolChoice === 'none' && isToolUseFailed(err)) {
+        const noTools = { ...request, tools: [] };
+        try {
+          return await callOnce(model, noTools);
+        } catch (err2) {
+          // Some models still try a tool call because tool messages are in the
+          // history. Last resort: show them the results as plain text.
+          if (!isToolUseFailed(err2)) throw err2;
+          return callOnce(model, { ...noTools, messages: flattenToolMessages(request.messages) });
+        }
       }
       throw err;
     }
@@ -135,4 +167,4 @@ const defaultLlm = createLlm({
   onFallback: (info) => logger.warn(info, 'AI model failed, falling back to the backup model'),
 });
 
-module.exports = { chat: defaultLlm.chat, createLlm, configuredModels, isFallbackWorthy, isToolUseFailed };
+module.exports = { chat: defaultLlm.chat, createLlm, configuredModels, isFallbackWorthy, isToolUseFailed, flattenToolMessages };

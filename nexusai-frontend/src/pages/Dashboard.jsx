@@ -3,10 +3,23 @@ import { RefreshCw, TrendingUp, TrendingDown, Newspaper, Search, X, Clock } from
 import api from '../api/axios';
 import ArticleCard from '../components/ArticleCard';
 import AskAI from '../components/AskAI';
+import HeadlineTicker from '../components/HeadlineTicker';
+import ArticleSkeleton from '../components/ArticleSkeleton';
+import useCountUp from '../hooks/useCountUp';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
 const SUGGESTED = ['Mumbai', 'Delhi', 'Bangalore', 'London', 'New York', 'Singapore', 'Tokyo', 'Paris', 'Dubai', 'Sydney'];
+function StatTile({ label, value, color, icon }) {
+  const n = useCountUp(value);
+  return (
+    <div className="card" style={{ padding: '0.9rem 1rem' }}>
+      <div style={{ fontSize: 12.5, color: 'var(--text3)', marginBottom: 4 }}>{label}</div>
+      <div className="stat-n" style={{ color }}>{icon}{n}</div>
+    </div>
+  );
+}
+
 const CATS = ['All', 'Politics', 'Business', 'Technology', 'Sports', 'Weather', 'Health'];
 
 export default function Dashboard() {
@@ -22,6 +35,7 @@ export default function Dashboard() {
   });
   const [showDrop, setShowDrop] = useState(false);
   const inputRef = useRef();
+  const [dateline] = useState(() => new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' }));
 
   useEffect(() => { fetchNews(false, 'Mumbai'); }, []);
 
@@ -75,17 +89,14 @@ export default function Dashboard() {
   return (
     <div className="page">
       {/* Header */}
-      <div style={{ marginBottom: '1.5rem' }}>
-        <h1 className="display" style={{ fontSize: 28, marginBottom: 4 }}>
-          Good to see you, {user?.name?.split(' ')[0]} 👋
-        </h1>
-        <p style={{ fontSize: 14, color: 'var(--text2)' }}>
-          Search any city or region in the world.
-        </p>
+      <div style={{ marginBottom: '1.25rem' }}>
+        <div className="dateline">{dateline}</div>
+        <h1 className="page-title">Good to see you, {user?.name?.split(' ')[0]}</h1>
+        <p className="page-sub">Pick a city to read what is happening there, or ask the AI about it.</p>
       </div>
 
       {/* Search bar */}
-      <form onSubmit={handleSearch} style={{ position: 'relative', marginBottom: '1rem' }}>
+      <form onSubmit={handleSearch} style={{ position: 'relative', marginBottom: '0.85rem' }}>
         <div style={{ display: 'flex', gap: 8 }}>
           <div style={{ position: 'relative', flex: 1 }}>
             <Search size={15} style={{
@@ -96,58 +107,37 @@ export default function Dashboard() {
               ref={inputRef}
               className="input"
               style={{ paddingLeft: 36, paddingRight: 36 }}
-              placeholder="Search any city — Tokyo, Cairo, Berlin, Lagos..."
+              placeholder="Search any city: Tokyo, Cairo, Berlin, Lagos…"
+              aria-label="City or region"
               value={input}
               onChange={e => { setInput(e.target.value); setShowDrop(true); }}
               onFocus={() => setShowDrop(true)}
               onBlur={() => setTimeout(() => setShowDrop(false), 150)}
             />
             {input && (
-              <button type="button" onClick={() => { setInput(''); inputRef.current?.focus(); }}
+              <button type="button" aria-label="Clear" onClick={() => { setInput(''); inputRef.current?.focus(); }}
                 style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
                   background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer' }}>
                 <X size={14} />
               </button>
             )}
 
-            {/* Dropdown */}
             {showDrop && (
-              <div style={{
-                position: 'absolute', top: '110%', left: 0, right: 0, zIndex: 50,
-                background: 'var(--bg2)', border: '1px solid var(--border)',
-                borderRadius: 'var(--radius)', overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
-              }}>
-                {/* Recent searches */}
+              <div className="menu" style={{ top: '110%', left: 0, right: 0 }}>
                 {history.length > 0 && (
                   <>
-                    <div style={{ padding: '8px 12px 4px', fontSize: 11, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      Recent
-                    </div>
+                    <div className="menu-head">Recent searches</div>
                     {history.map(h => (
-                      <button key={h} type="button" onMouseDown={() => pickCity(h)}
-                        style={{ width: '100%', textAlign: 'left', padding: '8px 14px', background: 'none',
-                          border: 'none', color: 'var(--text2)', fontSize: 14, cursor: 'pointer',
-                          display: 'flex', alignItems: 'center', gap: 8 }}
-                        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg3)'}
-                        onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+                      <button key={h} type="button" className="menu-item" onMouseDown={() => pickCity(h)}>
                         <Clock size={13} color="var(--text3)" /> {h}
                       </button>
                     ))}
                     <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
                   </>
                 )}
-
-                {/* Suggestions */}
-                <div style={{ padding: '8px 12px 4px', fontSize: 11, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  Popular cities
-                </div>
+                <div className="menu-head">Popular cities</div>
                 {SUGGESTED.filter(s => s.toLowerCase().includes(input.toLowerCase()) || input === '').map(s => (
-                  <button key={s} type="button" onMouseDown={() => pickCity(s)}
-                    style={{ width: '100%', textAlign: 'left', padding: '8px 14px', background: 'none',
-                      border: 'none', color: 'var(--text)', fontSize: 14, cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', gap: 8 }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg3)'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+                  <button key={s} type="button" className="menu-item" onMouseDown={() => pickCity(s)}>
                     <Search size={13} color="var(--text3)" /> {s}
                   </button>
                 ))}
@@ -160,76 +150,82 @@ export default function Dashboard() {
             {loading ? 'Loading…' : 'Search'}
           </button>
 
-          <button className="btn btn-ghost" type="button"
-            onClick={() => fetchNews(true)} disabled={loading} title="Force refresh">
-            <RefreshCw size={15} />
+          <button className="btn btn-ghost" type="button" aria-label="Fetch the latest news again"
+            onClick={() => fetchNews(true)} disabled={loading} title="Fetch the latest news again">
+            <RefreshCw size={15} className={loading ? 'spin' : ''} />
           </button>
         </div>
       </form>
 
+      {/* One-tap cities */}
+      <div className="city-chips" role="group" aria-label="Quick cities">
+        {SUGGESTED.slice(0, 6).map(c => (
+          <button key={c} type="button" className={`chip${region.toLowerCase() === c.toLowerCase() ? ' active' : ''}`}
+            onClick={() => pickCity(c)} disabled={loading}>
+            {c}
+          </button>
+        ))}
+      </div>
+
+      {/* Latest headlines strip */}
+      {!loading && <HeadlineTicker articles={articles} />}
+
       {/* Current region tag */}
       {articles.length > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '1rem', flexWrap: 'wrap' }}>
           <span style={{ fontSize: 13, color: 'var(--text2)' }}>Showing news for</span>
           <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--green)' }}>{region}</span>
           {source && (
             <span style={{ fontSize: 12, color: 'var(--text3)', marginLeft: 4 }}>
-              {source === 'cache' ? '⚡ from cache' : '🌐 live'}
+              {source === 'cache' ? 'Saved copy, loads instantly' : 'Fetched just now'}
             </span>
           )}
         </div>
       )}
 
       {/* Stats */}
-      {articles.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10, marginBottom: '1.25rem' }}>
-          {[
-            { label: 'Articles', value: articles.length, color: 'var(--green)' },
-            { label: 'Positive', value: pos,  icon: <TrendingUp size={13} />,   color: '#5DCAA5' },
-            { label: 'Negative', value: neg,  icon: <TrendingDown size={13} />, color: 'var(--red)' },
-            { label: 'Sources',  value: srcs, icon: <Newspaper size={13} />,    color: 'var(--amber)' },
-          ].map(s => (
-            <div key={s.label} className="card" style={{ padding: '0.9rem 1rem' }}>
-              <div style={{ fontSize: 11, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>{s.label}</div>
-              <div style={{ fontSize: 22, fontWeight: 600, color: s.color, display: 'flex', alignItems: 'center', gap: 4 }}>
-                {s.icon}{s.value}
-              </div>
-            </div>
-          ))}
+      {articles.length > 0 && !loading && (
+        <div className="stat-grid">
+          <StatTile label="Articles" value={articles.length} color="var(--green)" />
+          <StatTile label="Positive tone" value={pos} icon={<TrendingUp size={15} />} color="#5DCAA5" />
+          <StatTile label="Negative tone" value={neg} icon={<TrendingDown size={15} />} color="var(--red)" />
+          <StatTile label="Sources" value={srcs} icon={<Newspaper size={15} />} color="var(--amber)" />
         </div>
       )}
 
       {/* Category filter */}
-      {articles.length > 0 && (
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: '1.25rem' }}>
-          {CATS.map(c => (
-            <button key={c} className="btn btn-ghost btn-sm"
-              style={cat === c ? { borderColor: 'var(--green)', color: 'var(--green)', background: 'var(--bg3)' } : {}}
-              onClick={() => setCat(c)}>
-              {c}
-            </button>
-          ))}
+      {articles.length > 0 && !loading && (
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: '1.25rem' }} role="group" aria-label="Category">
+          {CATS.map(c => {
+            const n = c === 'All' ? articles.length : articles.filter(a => a.category === c).length;
+            if (c !== 'All' && n === 0) return null;
+            return (
+              <button key={c} type="button" className={`chip${cat === c ? ' active' : ''}`} onClick={() => setCat(c)}>
+                {c} <span className="count">{n}</span>
+              </button>
+            );
+          })}
         </div>
       )}
 
       {/* Articles */}
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text2)' }}>
-          <div className="spinner-lg" style={{ margin: '0 auto 1rem' }} />
-          Fetching & summarizing news for {region}…
-        </div>
+        <>
+          <p style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 10 }}>Fetching and summarising news for {region}…</p>
+          <ArticleSkeleton count={4} />
+        </>
       ) : filtered.length > 0 ? (
-        <div style={{ display: 'grid', gap: 10 }}>
-          {filtered.map((a, i) => <ArticleCard key={a._id || i} article={a} featured={i === 0} />)}
+        <div className="reveal-list" key={`${region}-${cat}`} style={{ display: 'grid', gap: 10 }}>
+          {filtered.map((a, i) => <ArticleCard key={a._id || i} article={a} featured={i === 0} index={i} />)}
         </div>
       ) : (
         <div className="empty">
           <div className="empty-icon">📰</div>
           <div className="empty-title">
-            {articles.length === 0 ? 'Search a city to get started' : 'No articles in this category'}
+            {articles.length === 0 ? 'No news yet for this place' : 'No articles in this category'}
           </div>
           <p style={{ fontSize: 14, marginTop: 6 }}>
-            {articles.length === 0 ? 'Type any city name above and press Search.' : 'Try another category.'}
+            {articles.length === 0 ? 'Pick one of the cities above, or type any city and press Search.' : 'Pick another category above.'}
           </p>
         </div>
       )}

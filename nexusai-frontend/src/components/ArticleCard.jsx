@@ -25,7 +25,7 @@ function timeAgo(dateStr) {
   return `${Math.floor(diff / 1440)}d ago`;
 }
 
-export default function ArticleCard({ article, featured, onSaveChange }) {
+export default function ArticleCard({ article, featured, onSaveChange, index = 0 }) {
   const {
     _id, title, summary, description, source, publishedAt, category, sentiment, url,
     biasLevel, factCheckNote,
@@ -44,6 +44,8 @@ export default function ArticleCard({ article, featured, onSaveChange }) {
   const [saved, setSaved]         = useState(initialSaved);
   const [saving, setSaving]       = useState(false);
 
+  const [likePop, setLikePop] = useState(0);
+  const [savePop, setSavePop] = useState(0);
   const [showComments, setShowComments] = useState(false);
 
   const [showLangMenu, setShowLangMenu] = useState(false);
@@ -57,6 +59,7 @@ export default function ArticleCard({ article, featured, onSaveChange }) {
       const r = await api.post(`/news/${_id}/like`);
       setLiked(r.data.liked);
       setLikeCount(r.data.likeCount);
+      if (r.data.liked) setLikePop((n) => n + 1);
     } catch {
       toast.error('Could not update like.');
     }
@@ -70,6 +73,7 @@ export default function ArticleCard({ article, featured, onSaveChange }) {
       const r = await api.post(`/news/${_id}/save`);
       setSaved(r.data.saved);
       setSaveCount(r.data.saveCount);
+      if (r.data.saved) setSavePop((n) => n + 1);
       toast.success(r.data.saved ? 'Saved' : 'Removed from saved');
       onSaveChange?.(_id, r.data.saved);
     } catch {
@@ -91,8 +95,8 @@ export default function ArticleCard({ article, featured, onSaveChange }) {
   }
 
   return (
-    <div className={`card${featured ? ' card-featured' : ''}`}
-      style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+    <div className={`card article${featured ? ' card-featured' : ''}`}
+      style={{ display: 'flex', flexDirection: 'column', gap: 8, '--i': index }}>
 
       {/* Meta row */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
@@ -113,7 +117,9 @@ export default function ArticleCard({ article, featured, onSaveChange }) {
       </div>
 
       {/* Title */}
-      <p style={{ fontSize: 15, fontWeight: 500, lineHeight: 1.45 }}>{title}</p>
+      <h3 className="article-title">
+        {url ? <a href={url} target="_blank" rel="noopener noreferrer">{title}</a> : title}
+      </h3>
 
       {/* Summary */}
       <p style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.65 }}>
@@ -150,58 +156,37 @@ export default function ArticleCard({ article, featured, onSaveChange }) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4, gap: 8, flexWrap: 'wrap' }}>
         <span style={{ fontSize: 12, color: 'var(--text3)' }}>{source?.name || 'Unknown'}</span>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          {/* Like */}
-          <button onClick={toggleLike} disabled={liking || !_id}
-            style={{ background: 'none', border: 'none', cursor: _id ? 'pointer' : 'default',
-              display: 'flex', alignItems: 'center', gap: 4, color: liked ? 'var(--red)' : 'var(--text3)', fontSize: 12 }}>
-            <Heart size={13} fill={liked ? 'var(--red)' : 'none'} /> {likeCount || ''}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+          <button className={`act${liked ? ' on-red' : ''}`} onClick={toggleLike} disabled={liking || !_id}
+            aria-pressed={liked} aria-label={liked ? 'Unlike' : 'Like'} title={liked ? 'Unlike' : 'Like'}>
+            <Heart key={likePop} size={14} fill={liked ? 'currentColor' : 'none'} className={likePop ? 'pop' : ''} /> {likeCount || ''}
           </button>
 
-          {/* Save/bookmark */}
-          <button onClick={toggleSave} disabled={saving || !_id} title={saved ? 'Remove from saved' : 'Save article'}
-            style={{ background: 'none', border: 'none', cursor: _id ? 'pointer' : 'default',
-              display: 'flex', alignItems: 'center', gap: 4, color: saved ? 'var(--green)' : 'var(--text3)', fontSize: 12 }}>
-            <Bookmark size={13} fill={saved ? 'var(--green)' : 'none'} /> {saveCount || ''}
+          <button className={`act${saved ? ' on-green' : ''}`} onClick={toggleSave} disabled={saving || !_id}
+            aria-pressed={saved} aria-label={saved ? 'Remove from saved' : 'Save article'} title={saved ? 'Remove from saved' : 'Save article'}>
+            <Bookmark key={savePop} size={14} fill={saved ? 'currentColor' : 'none'} className={savePop ? 'pop' : ''} /> {saveCount || ''}
           </button>
 
-          {/* Comments toggle */}
-          <button onClick={() => setShowComments(s => !s)} disabled={!_id}
-            style={{ background: 'none', border: 'none', cursor: _id ? 'pointer' : 'default',
-              display: 'flex', alignItems: 'center', gap: 4, color: 'var(--text3)', fontSize: 12 }}>
-            <MessageCircle size={13} /> Comments
+          <button className="act" onClick={() => setShowComments(s => !s)} disabled={!_id} aria-expanded={showComments}>
+            <MessageCircle size={14} /> Comments
           </button>
 
-          {/* Translate */}
           <div style={{ position: 'relative' }}>
-            <button onClick={() => setShowLangMenu(s => !s)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', gap: 4, color: 'var(--text3)', fontSize: 12 }}>
-              <Languages size={13} /> Translate
+            <button className="act" onClick={() => setShowLangMenu(s => !s)} aria-expanded={showLangMenu}>
+              <Languages size={14} /> Translate
             </button>
             {showLangMenu && (
-              <div style={{
-                position: 'absolute', bottom: '120%', right: 0, zIndex: 20,
-                background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)',
-                overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.4)', minWidth: 120,
-              }}>
+              <div className="menu" style={{ bottom: '120%', right: 0, minWidth: 130 }}>
                 {LANGUAGES.map(l => (
-                  <button key={l} onClick={() => translate(l)}
-                    style={{ width: '100%', textAlign: 'left', padding: '7px 12px', background: 'none',
-                      border: 'none', color: 'var(--text2)', fontSize: 13, cursor: 'pointer' }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg3)'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'none'}>
-                    {l}
-                  </button>
+                  <button key={l} className="menu-item" onClick={() => translate(l)}>{l}</button>
                 ))}
               </div>
             )}
           </div>
 
           {url && (
-            <a href={url} target="_blank" rel="noopener noreferrer"
-              style={{ fontSize: 12, color: 'var(--green)', display: 'flex', alignItems: 'center', gap: 3 }}>
-              Read full <ExternalLink size={11} />
+            <a href={url} target="_blank" rel="noopener noreferrer" className="act" style={{ color: 'var(--green)' }}>
+              Read full article <ExternalLink size={12} />
             </a>
           )}
         </div>

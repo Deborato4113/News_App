@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { Bot, Send, Square, MessageSquarePlus } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
+import { Bot, Send, Square, MessageSquarePlus, Sparkles } from 'lucide-react';
 import api from '../api/axios';
 import { streamAsk } from '../api/agentStream';
 import { useAuth } from '../context/AuthContext';
@@ -90,6 +91,7 @@ export default function AskNexus() {
 
   const loading = thread.some((t) => t.status === 'running');
 
+
   // Initial stats load — inline async with a cancelled guard (avoids
   // setState directly in the effect body).
   useEffect(() => {
@@ -148,6 +150,17 @@ export default function AskNexus() {
       }
     }
   }
+
+  // Arrived from the quick-find box (Ctrl+K) with a question: ask it once.
+  const location = useLocation();
+  const autoAsked = useRef(false);
+  const incoming = location.state?.ask;
+  useEffect(() => {
+    if (!incoming || autoAsked.current) return;
+    autoAsked.current = true;           // once only (also under React StrictMode's double effect)
+    setTimeout(() => handleAsk(null, incoming), 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [incoming]);
 
   function stop() {
     abortRef.current?.abort();
@@ -208,10 +221,10 @@ export default function AskNexus() {
 
       {/* Example prompts (only before the first question) */}
       {thread.length === 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: '1rem' }}>
+        <div className="prompt-chips">
           {EXAMPLES.map((ex) => (
-            <button key={ex} type="button" className="btn btn-ghost btn-sm" onClick={() => handleAsk(null, ex)}>
-              {ex}
+            <button key={ex} type="button" className="prompt-chip" onClick={() => handleAsk(null, ex)}>
+              <Sparkles size={15} aria-hidden="true" /> {ex}
             </button>
           ))}
         </div>

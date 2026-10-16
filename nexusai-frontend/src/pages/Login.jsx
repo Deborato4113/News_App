@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
+import AuthShell from '../components/AuthShell';
 
 export default function Login() {
   const { login, loginWithGoogle, firebaseEnabled } = useAuth();
@@ -39,7 +40,7 @@ export default function Login() {
   }
 
   return (
-    <div className="auth-wrap">
+    <AuthShell>
       <div className="auth-card">
         <div className="auth-logo">NexusAI</div>
         <h2 className="auth-title">Welcome back</h2>
@@ -87,6 +88,6 @@ export default function Login() {
           Don't have an account? <Link to="/signup">Sign up</Link>
         </div>
       </div>
-    </div>
+    </AuthShell>
   );
 }

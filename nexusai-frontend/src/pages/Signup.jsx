@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
+import AuthShell from '../components/AuthShell';
 
 // Mirrors the backend's zod rule (schemas/authSchemas.js) so the user sees
 // a matching error here instead of submitting and getting rejected by the
@@ -55,7 +56,7 @@ export default function Signup() {
   const f = (k) => e => setForm(p => ({ ...p, [k]: e.target.value }));
 
   return (
-    <div className="auth-wrap">
+    <AuthShell>
       <div className="auth-card">
         <div className="auth-logo">NexusAI</div>
         <h2 className="auth-title">Create account</h2>
@@ -108,6 +109,6 @@ export default function Signup() {
           Already have an account? <Link to="/login">Sign in</Link>
         </div>
       </div>
-    </div>
+    </AuthShell>
   );
 }

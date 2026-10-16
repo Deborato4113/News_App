@@ -1,87 +1,75 @@
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, Newspaper, BrainCircuit, ShieldCheck, Star, Bookmark, Search, Bot } from 'lucide-react';
+import { LogOut, Search as SearchIcon, Newspaper, BrainCircuit, ShieldCheck, Star, Bookmark, Search, Bot, Menu, X } from 'lucide-react';
 import toast from 'react-hot-toast';
+
+// One link style everywhere; NavLink adds the "active" class for the current page.
+function Item({ to, icon: Icon, children, onClick, end }) {
+  return (
+    <NavLink to={to} end={end} onClick={onClick} className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
+      <Icon size={15} aria-hidden="true" /> {children}
+    </NavLink>
+  );
+}
 
 export default function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const { pathname } = useLocation();
+  const [open, setOpen] = useState(false);
+  const close = () => setOpen(false);
 
   function handleLogout() {
+    close();
     logout();
     toast.success('Logged out');
     navigate('/login');
   }
 
-  const iconLinkStyle = (path) => ({
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    width: 32, height: 32, borderRadius: 'var(--radius)',
-    border: '1px solid var(--border)', color: pathname === path ? 'var(--green)' : 'var(--text2)',
-    borderColor: pathname === path ? 'var(--green)' : 'var(--border)',
-    background: pathname === path ? 'var(--bg3)' : 'transparent',
-  });
-
   return (
-    <nav style={{
-      background: 'var(--bg2)', borderBottom: '1px solid var(--border)',
-      position: 'sticky', top: 0, zIndex: 100,
-    }}>
-      <div style={{
-        maxWidth: 1100, margin: '0 auto', padding: '0.5rem 1.5rem',
-        minHeight: 58, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        flexWrap: 'wrap', gap: 8,
-      }}>
-        {/* Brand */}
-        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{
-            width: 8, height: 8, borderRadius: '50%', background: 'var(--green)',
-            boxShadow: '0 0 6px var(--green)', display: 'inline-block',
-            animation: 'pulse 2s infinite',
-          }} />
-          <span className="display" style={{ fontSize: 18, color: 'var(--green)' }}>NexusAI</span>
-          <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}`}</style>
+    <nav className="nav" aria-label="Main">
+      <div className="nav-inner">
+        <Link to="/" className="brand" onClick={close} aria-label="NexusAI home">
+          <span className="brand-dot" />
+          <span className="brand-name">Nexus<span>AI</span></span>
         </Link>
 
-        {/* Nav links + user */}
-        {user && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-            <Link to="/" className={`btn btn-ghost btn-sm${pathname==='/'?' active':''}`}
-              style={pathname==='/'?{color:'var(--green)',borderColor:'var(--green)'}:{}}>
-              <Newspaper size={14} /> News
-            </Link>
-            <Link to="/quiz" className={`btn btn-ghost btn-sm${pathname==='/quiz'?' active':''}`}
-              style={pathname==='/quiz'?{color:'var(--green)',borderColor:'var(--green)'}:{}}>
-              <BrainCircuit size={14} /> Quiz
-            </Link>
-            <Link to="/ask" className={`btn btn-ghost btn-sm${pathname==='/ask'?' active':''}`}
-              style={pathname==='/ask'?{color:'var(--green)',borderColor:'var(--green)'}:{}}>
-              <Bot size={14} /> Ask AI
-            </Link>
-            <Link to="/feed" title="My Feed" style={iconLinkStyle('/feed')}>
-              <Star size={14} />
-            </Link>
-            <Link to="/saved" title="Saved Articles" style={iconLinkStyle('/saved')}>
-              <Bookmark size={14} />
-            </Link>
-            <Link to="/search" title="Search" style={iconLinkStyle('/search')}>
-              <Search size={14} />
-            </Link>
-            {user.role === 'admin' && (
-              <Link to="/admin" className={`btn btn-ghost btn-sm${pathname==='/admin'?' active':''}`}
-                style={pathname==='/admin'?{color:'var(--green)',borderColor:'var(--green)'}:{}}>
-                <ShieldCheck size={14} /> Admin
-              </Link>
-            )}
-            <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 4px' }} />
-            <span style={{ fontSize: 13, color: 'var(--text2)' }}>
-              {user.name.split(' ')[0]}
-            </span>
-            <button className="btn btn-ghost btn-sm" onClick={handleLogout} title="Logout">
-              <LogOut size={14} />
-            </button>
-          </div>
-        )}
+        <button
+          className="nav-toggle"
+          onClick={() => setOpen((o) => !o)}
+          aria-label={open ? 'Close menu' : 'Open menu'}
+          aria-expanded={open}
+        >
+          {open ? <X size={18} /> : <Menu size={18} />}
+        </button>
+
+        <div className={`nav-links${open ? ' open' : ''}`}>
+          {user ? (
+            <>
+              <Item to="/" end icon={Newspaper} onClick={close}>News</Item>
+              <Item to="/ask" icon={Bot} onClick={close}>Ask AI</Item>
+              <Item to="/quiz" icon={BrainCircuit} onClick={close}>Quiz</Item>
+              <Item to="/feed" icon={Star} onClick={close}>My feed</Item>
+              <Item to="/saved" icon={Bookmark} onClick={close}>Saved</Item>
+              <Item to="/search" icon={Search} onClick={close}>Search</Item>
+              {user.role === 'admin' && <Item to="/admin" icon={ShieldCheck} onClick={close}>Admin</Item>}
+              <button type="button" className="nav-search" onClick={() => { close(); window.dispatchEvent(new Event('nexus:palette')); }} aria-label="Quick find">
+                <SearchIcon size={14} aria-hidden="true" /> <span className="lbl">Quick find</span> <kbd className="kbd">Ctrl K</kbd>
+              </button>
+              <div className="nav-sep" />
+              <span className="nav-user">
+                <span className="avatar" aria-hidden="true">{(user.name || '?').trim().charAt(0).toUpperCase()}</span>
+                {(user.name || '').split(' ')[0]}
+              </span>
+              <button className="nav-link" onClick={handleLogout} title="Log out"><LogOut size={15} aria-hidden="true" /> <span className="lbl">Log out</span></button>
+            </>
+          ) : (
+            <>
+              <Link to="/login" className="nav-link" onClick={close}>Log in</Link>
+              <Link to="/signup" className="btn btn-primary btn-sm" onClick={close}>Get started</Link>
+            </>
+          )}
+        </div>
       </div>
     </nav>
   );

@@ -9,10 +9,35 @@ const api = axios.create({
   timeout: 15000,
 });
 
+// Slow-request signal. Free hosting puts the server to sleep when idle, so the
+// first request can take a while; if any request is still pending after 4s the
+// UI shows a "waking up" notice, and hides it once nothing is slow any more.
+const SLOW_AFTER_MS = 4000;
+let slowCount = 0;
+const emitSlow = (on) => window.dispatchEvent(new CustomEvent('nexusai:slow', { detail: on }));
+
+function settle(config) {
+  const meta = config?.metadata;
+  if (!meta) return;
+  clearTimeout(meta.timer);
+  if (meta.slow) {
+    meta.slow = false;
+    slowCount = Math.max(0, slowCount - 1);
+    if (slowCount === 0) emitSlow(false);
+  }
+}
+
 // Attach JWT token on every request if available
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('nexusai_token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
+  const meta = { slow: false };
+  meta.timer = setTimeout(() => {
+    meta.slow = true;
+    slowCount += 1;
+    if (slowCount === 1) emitSlow(true);
+  }, SLOW_AFTER_MS);
+  config.metadata = meta;
   return config;
 });
 
@@ -20,8 +45,12 @@ api.interceptors.request.use((config) => {
 // from anywhere in the app, not just on the initial /auth/me check.
 // AuthContext listens for this event and clears user state + redirects.
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    settle(response.config);
+    return response;
+  },
   (error) => {
+    settle(error.config);
     if (error.response?.status === 401) {
       localStorage.removeItem('nexusai_token');
       window.dispatchEvent(new CustomEvent('nexusai:unauthorized'));

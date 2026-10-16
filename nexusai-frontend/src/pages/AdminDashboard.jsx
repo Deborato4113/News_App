@@ -1,7 +1,11 @@
 import { useState, useEffect } from 'react';
-import { ShieldCheck, Flag, Trash2, RefreshCw, Users, Newspaper, MessageSquare, AlertTriangle } from 'lucide-react';
+import { ShieldCheck, Flag, Trash2, RefreshCw, Users, Newspaper, MessageSquare, AlertTriangle, Clock, CheckCircle2 } from 'lucide-react';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
+import PageHeader from '../components/PageHeader';
+import ConfirmDialog from '../components/ConfirmDialog';
+import EmptyState from '../components/EmptyState';
+import useCountUp from '../hooks/useCountUp';
 
 export default function AdminDashboard() {
   const [stats, setStats]           = useState(null);
@@ -9,6 +13,7 @@ export default function AdminDashboard() {
   const [loading, setLoading]       = useState(true);
   const [refreshRegions, setRefreshRegions] = useState('mumbai, delhi, bangalore');
   const [refreshing, setRefreshing] = useState(false);
+  const [toDelete, setToDelete]     = useState(null);
 
   // Reusable loader for manual re-triggers (e.g. after a bulk refresh).
   // Click handlers can call setState synchronously without issue — it's
@@ -62,7 +67,7 @@ export default function AdminDashboard() {
   }
 
   async function removeArticle(id) {
-    if (!confirm('Delete this article permanently?')) return;
+    setToDelete(null);
     try {
       await api.delete(`/admin/articles/${id}`);
       setFlagged(f => f.filter(a => a._id !== id));
@@ -90,10 +95,14 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <div className="page">
-        <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text2)' }}>
-          <div className="spinner-lg" style={{ margin: '0 auto 1rem' }} />
-          Loading admin dashboard…
+      <div className="page" aria-busy="true">
+        <PageHeader icon={ShieldCheck} title="Admin Dashboard" sub="Loading platform data…" />
+        <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
+          {Array.from({ length: 5 }, (_, i) => <div key={i} className="skeleton" style={{ height: 82, borderRadius: 14 }} />)}
+        </div>
+        <div className="two-col">
+          <div className="skeleton" style={{ height: 180, borderRadius: 14 }} />
+          <div className="skeleton" style={{ height: 180, borderRadius: 14 }} />
         </div>
       </div>
     );
@@ -101,103 +110,102 @@ export default function AdminDashboard() {
 
   return (
     <div className="page">
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '1.5rem' }}>
-        <ShieldCheck size={22} color="var(--green)" />
-        <h1 className="display" style={{ fontSize: 26 }}>Admin Dashboard</h1>
-      </div>
+      <PageHeader icon={ShieldCheck} title="Admin Dashboard" sub="Platform health, content moderation and cache refresh." />
 
-      {/* Stats */}
       {stats && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10, marginBottom: '1.5rem' }}>
-          <div className="stat-tile">
-            <div className="stat-label"><Users size={11} style={{ marginRight: 4 }} />Users</div>
-            <div className="stat-value">{stats.totalUsers}</div>
+        <div className="stat-grid reveal-list" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
+          <Tile i={0} icon={<Users size={12} />} label="Users" value={stats.totalUsers} />
+          <Tile i={1} icon={<Newspaper size={12} />} label="Articles" value={stats.totalArticles} />
+          <Tile i={2} icon={<Clock size={12} />} label="Last 24h" value={stats.articlesLast24h} />
+          <Tile i={3} icon={<Flag size={12} />} label="Flagged" value={stats.flaggedCount} color={stats.flaggedCount ? 'var(--red)' : 'var(--green)'} />
+          <Tile i={4} icon={<MessageSquare size={12} />} label="Comments" value={stats.totalComments} />
+        </div>
+      )}
+
+      {stats && (
+        <div className="two-col">
+          <div className="card">
+            <h3 className="card-title">Top regions</h3>
+            <Bars rows={stats.byRegion.map((r) => ({ name: r.region, n: r.count }))} />
           </div>
-          <div className="stat-tile">
-            <div className="stat-label"><Newspaper size={11} style={{ marginRight: 4 }} />Articles</div>
-            <div className="stat-value">{stats.totalArticles}</div>
-          </div>
-          <div className="stat-tile">
-            <div className="stat-label">Last 24h</div>
-            <div className="stat-value">{stats.articlesLast24h}</div>
-          </div>
-          <div className="stat-tile">
-            <div className="stat-label"><Flag size={11} style={{ marginRight: 4 }} />Flagged</div>
-            <div className="stat-value" style={{ color: stats.flaggedCount ? 'var(--red)' : 'var(--green)' }}>{stats.flaggedCount}</div>
-          </div>
-          <div className="stat-tile">
-            <div className="stat-label"><MessageSquare size={11} style={{ marginRight: 4 }} />Comments</div>
-            <div className="stat-value">{stats.totalComments}</div>
+          <div className="card">
+            <h3 className="card-title">By category</h3>
+            <Bars rows={stats.byCategory.map((c) => ({ name: c.category, n: c.count }))} />
           </div>
         </div>
       )}
 
-      {/* Top regions / categories */}
-      {stats && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: '1.5rem' }}>
-          <div className="card">
-            <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 10 }}>Top regions</h3>
-            {stats.byRegion.map(r => (
-              <div key={r.region} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '4px 0', color: 'var(--text2)' }}>
-                <span style={{ textTransform: 'capitalize' }}>{r.region}</span><span>{r.count}</span>
-              </div>
-            ))}
-          </div>
-          <div className="card">
-            <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 10 }}>By category</h3>
-            {stats.byCategory.map(c => (
-              <div key={c.category} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '4px 0', color: 'var(--text2)' }}>
-                <span>{c.category}</span><span>{c.count}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Bulk refresh */}
-      <div className="card" style={{ marginBottom: '1.5rem' }}>
-        <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 10 }}>Bulk refresh regions</h3>
-        <form onSubmit={bulkRefresh} style={{ display: 'flex', gap: 8 }}>
-          <input className="input" value={refreshRegions} onChange={e => setRefreshRegions(e.target.value)}
-            placeholder="mumbai, delhi, bangalore" />
+      <div className="card" style={{ marginBottom: '1.25rem' }}>
+        <h3 className="card-title"><RefreshCw size={14} color="var(--green)" /> Bulk refresh regions</h3>
+        <form onSubmit={bulkRefresh} className="toolbar" style={{ marginBottom: 0 }}>
+          <input className="input" style={{ flex: 1, minWidth: 200 }} aria-label="Regions to refresh" value={refreshRegions}
+            onChange={e => setRefreshRegions(e.target.value)} placeholder="mumbai, delhi, bangalore" />
           <button className="btn btn-primary" type="submit" disabled={refreshing}>
-            {refreshing ? <div className="spinner" /> : <RefreshCw size={14} />}
-            Refresh
+            {refreshing ? <div className="spinner" /> : <RefreshCw size={14} />} Refresh
           </button>
         </form>
-        <p style={{ fontSize: 12, color: 'var(--text3)', marginTop: 8 }}>Comma-separated region list. Runs sequentially to stay under API rate limits.</p>
+        <p className="meta" style={{ marginTop: 10 }}>Comma-separated. Runs one region at a time to stay under API rate limits.</p>
       </div>
 
-      {/* Flagged articles */}
       <div className="card">
-        <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-          <AlertTriangle size={14} color="var(--amber)" /> Flagged articles ({flagged.length})
-        </h3>
+        <h3 className="card-title"><AlertTriangle size={14} color="var(--amber)" /> Flagged articles ({flagged.length})</h3>
         {flagged.length === 0 ? (
-          <p style={{ fontSize: 13, color: 'var(--text3)' }}>No flagged articles right now.</p>
+          <EmptyState icon={CheckCircle2} title="All clear">No flagged articles right now.</EmptyState>
         ) : (
-          <table className="admin-table">
-            <thead>
-              <tr><th>Title</th><th>Region</th><th>Reason</th><th></th></tr>
-            </thead>
-            <tbody>
-              {flagged.map(a => (
-                <tr key={a._id}>
-                  <td style={{ maxWidth: 320 }}>{a.title}</td>
-                  <td style={{ textTransform: 'capitalize' }}>{a.region}</td>
-                  <td>{a.flagReason}</td>
-                  <td style={{ whiteSpace: 'nowrap' }}>
-                    <button className="btn btn-ghost btn-sm" onClick={() => unflag(a._id)} style={{ marginRight: 6 }}>Unflag</button>
-                    <button className="btn btn-danger btn-sm" onClick={() => removeArticle(a._id)}>
-                      <Trash2 size={12} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="table-wrap">
+            <table className="admin-table">
+              <thead><tr><th>Title</th><th>Region</th><th>Reason</th><th></th></tr></thead>
+              <tbody>
+                {flagged.map(a => (
+                  <tr key={a._id}>
+                    <td style={{ maxWidth: 320 }}>{a.title}</td>
+                    <td style={{ textTransform: 'capitalize' }}>{a.region}</td>
+                    <td>{a.flagReason}</td>
+                    <td>
+                      <div className="row-actions">
+                        <button className="btn btn-ghost btn-sm" onClick={() => unflag(a._id)}>Unflag</button>
+                        <button className="btn btn-danger btn-sm" aria-label="Delete article" onClick={() => setToDelete(a)}><Trash2 size={12} /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
+
+      {toDelete && (
+        <ConfirmDialog danger title="Delete this article?" confirmLabel="Delete"
+          message={`“${toDelete.title}” will be removed permanently. This cannot be undone.`}
+          onCancel={() => setToDelete(null)} onConfirm={() => removeArticle(toDelete._id)} />
+      )}
+    </div>
+  );
+}
+
+function Tile({ icon, label, value, color, i }) {
+  const n = useCountUp(value);
+  return (
+    <div className="stat-tile" style={{ '--i': i }}>
+      <div className="stat-label">{icon}{label}</div>
+      <div className="stat-value" style={color ? { color } : undefined}>{n}</div>
+    </div>
+  );
+}
+
+function Bars({ rows }) {
+  const max = Math.max(1, ...rows.map((r) => r.n));
+  if (!rows.length) return <p className="meta">No data yet.</p>;
+  return (
+    <div className="bars">
+      {rows.map((r) => (
+        <div className="bar-row" key={r.name}>
+          <span>{r.name}</span>
+          <div className="bar-track"><i style={{ '--w': `${(r.n / max) * 100}%` }} /></div>
+          <span>{r.n}</span>
+        </div>
+      ))}
     </div>
   );
 }

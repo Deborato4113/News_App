@@ -57,39 +57,34 @@ export default function CommentSection({ articleId }) {
   }
 
   return (
-    <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
-      <form onSubmit={submit} style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
-        <input
-          className="input"
-          placeholder="Add a comment…"
-          value={text}
-          maxLength={500}
-          onChange={e => setText(e.target.value)}
-          style={{ fontSize: 13, padding: '7px 10px' }}
-        />
-        <button className="btn btn-primary btn-sm" type="submit" disabled={posting || !text.trim()}>
+    <div className="comments">
+      <form onSubmit={submit} className="cform">
+        <input className="input" placeholder="Add a comment…" aria-label="Add a comment"
+          value={text} maxLength={500} onChange={e => setText(e.target.value)} />
+        {text.length > 400 && <span className="ccount">{500 - text.length}</span>}
+        <button className="btn btn-primary btn-sm" type="submit" disabled={posting || !text.trim()} aria-label="Post comment">
           {posting ? <div className="spinner" /> : <Send size={13} />}
         </button>
       </form>
 
       {loading ? (
-        <p style={{ fontSize: 12, color: 'var(--text3)' }}>Loading comments…</p>
+        <div className="sk-list" aria-busy="true">
+          <div className="skeleton sk-line" style={{ width: '60%' }} />
+          <div className="skeleton sk-line" style={{ width: '85%' }} />
+        </div>
       ) : comments.length === 0 ? (
-        <p style={{ fontSize: 12, color: 'var(--text3)' }}>No comments yet — be the first.</p>
+        <p className="meta">No comments yet. Start the conversation.</p>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 220, overflowY: 'auto' }}>
+        <div className="clist">
           {comments.map(c => (
-            <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-              <div style={{ fontSize: 13, lineHeight: 1.5 }}>
-                <span style={{ fontWeight: 600, color: 'var(--text)' }}>{c.user.name}</span>{' '}
-                <span style={{ color: 'var(--text3)', fontSize: 11 }}>{timeAgo(c.createdAt)}</span>
-                <p style={{ color: 'var(--text2)' }}>{c.text}</p>
+            <div key={c.id} className="comment">
+              <span className="avatar">{(c.user.name || '?')[0].toUpperCase()}</span>
+              <div className="comment-body">
+                <b>{c.user.name}</b><time>{timeAgo(c.createdAt)}</time>
+                <p>{c.text}</p>
               </div>
               {(user?.id === c.user.id || user?.role === 'admin') && (
-                <button
-                  onClick={() => remove(c.id)}
-                  title="Delete comment"
-                  style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', flexShrink: 0 }}>
+                <button className="comment-x" onClick={() => remove(c.id)} title="Delete comment" aria-label="Delete comment">
                   <Trash2 size={13} />
                 </button>
               )}

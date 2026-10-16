@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { RefreshCw, TrendingUp, TrendingDown, Newspaper, Search, X, Clock } from 'lucide-react';
+import { RefreshCw, TrendingUp, TrendingDown, Newspaper, Search, X, Clock, LayoutList, Rows3 } from 'lucide-react';
 import api from '../api/axios';
 import ArticleCard from '../components/ArticleCard';
 import AskAI from '../components/AskAI';
 import HeadlineTicker from '../components/HeadlineTicker';
 import ArticleSkeleton from '../components/ArticleSkeleton';
+import EmptyState from '../components/EmptyState';
 import useCountUp from '../hooks/useCountUp';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -20,6 +21,8 @@ function StatTile({ label, value, color, icon }) {
   );
 }
 
+const SORTS = [['new', 'Newest'], ['top', 'Most liked']];
+const TONES = [['all', 'Any tone'], ['pos', 'Positive'], ['neg', 'Negative'], ['neu', 'Neutral']];
 const CATS = ['All', 'Politics', 'Business', 'Technology', 'Sports', 'Weather', 'Health'];
 
 export default function Dashboard() {
@@ -30,6 +33,11 @@ export default function Dashboard() {
   const [articles, setArticles] = useState([]);
   const [loading,  setLoading]  = useState(false);
   const [source,   setSource]   = useState('');
+  const [sort,     setSort]     = useState('new');
+  const [tone,     setTone]     = useState('all');
+  const [compact,  setCompact]  = useState(() => {
+    try { return localStorage.getItem('nexusai_compact') === '1'; } catch { return false; }
+  });
   const [history,  setHistory]  = useState(() => {
     try { return JSON.parse(localStorage.getItem('nexusai_history') || '[]'); } catch { return []; }
   });
@@ -59,6 +67,11 @@ export default function Dashboard() {
       } else {
         r = await api.get('/news', { params: { region: city, limit: 12 } });
       }
+      if (forceRefresh) {
+        const seen = new Set(articles.map((a) => a._id));
+        const fresh = r.data.articles.filter((a) => !seen.has(a._id)).length;
+        if (fresh > 0 && articles.length > 0) toast(`${fresh} new ${fresh === 1 ? 'story' : 'stories'} since your last load`, { icon: '🆕' });
+      }
       setArticles(r.data.articles);
       setSource(r.data.source);
       saveHistory(city);
@@ -81,7 +94,17 @@ export default function Dashboard() {
     fetchNews(false, city);
   }
 
-  const filtered = cat === 'All' ? articles : articles.filter(a => a.category === cat);
+  function toggleCompact() {
+    const next = !compact;
+    setCompact(next);
+    try { localStorage.setItem('nexusai_compact', next ? '1' : '0'); } catch { /* storage unavailable */ }
+  }
+
+  const filtered = articles
+    .filter(a => (cat === 'All' || a.category === cat) && (tone === 'all' || a.sentiment === tone))
+    .sort((a, b) => sort === 'top'
+      ? (b.likeCount || 0) - (a.likeCount || 0)
+      : new Date(b.publishedAt) - new Date(a.publishedAt));
   const pos  = articles.filter(a => a.sentiment === 'pos').length;
   const neg  = articles.filter(a => a.sentiment === 'neg').length;
   const srcs = new Set(articles.map(a => a.source?.name).filter(Boolean)).size;
@@ -208,6 +231,22 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* Sort, tone and density */}
+      {articles.length > 0 && !loading && (
+        <div className="toolbar" style={{ justifyContent: 'space-between' }}>
+          <div className="seg" role="group" aria-label="Sort">
+            {SORTS.map(([k, l]) => <button key={k} type="button" className={sort === k ? 'on' : ''} aria-pressed={sort === k} onClick={() => setSort(k)}>{l}</button>)}
+          </div>
+          <div className="seg" role="group" aria-label="Tone">
+            {TONES.map(([k, l]) => <button key={k} type="button" className={tone === k ? 'on' : ''} aria-pressed={tone === k} onClick={() => setTone(k)}>{l}</button>)}
+          </div>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={toggleCompact} aria-pressed={compact}
+            title={compact ? 'Show summaries' : 'Compact view'}>
+            {compact ? <Rows3 size={14} /> : <LayoutList size={14} />} {compact ? 'Comfortable' : 'Compact'}
+          </button>
+        </div>
+      )}
+
       {/* Articles */}
       {loading ? (
         <>
@@ -215,19 +254,14 @@ export default function Dashboard() {
           <ArticleSkeleton count={4} />
         </>
       ) : filtered.length > 0 ? (
-        <div className="reveal-list" key={`${region}-${cat}`} style={{ display: 'grid', gap: 10 }}>
-          {filtered.map((a, i) => <ArticleCard key={a._id || i} article={a} featured={i === 0} index={i} />)}
+        <div className={`reveal-list${compact ? ' compact' : ''}`} key={`${region}-${cat}-${sort}-${tone}`} style={{ display: 'grid', gap: 10 }}>
+          {filtered.map((a, i) => <ArticleCard key={a._id || i} article={a} featured={i === 0} index={i} siblings={filtered} />)}
         </div>
       ) : (
-        <div className="empty">
-          <div className="empty-icon">📰</div>
-          <div className="empty-title">
-            {articles.length === 0 ? 'No news yet for this place' : 'No articles in this category'}
-          </div>
-          <p style={{ fontSize: 14, marginTop: 6 }}>
-            {articles.length === 0 ? 'Pick one of the cities above, or type any city and press Search.' : 'Pick another category above.'}
-          </p>
-        </div>
+        <EmptyState icon={Newspaper}
+          title={articles.length === 0 ? 'No news yet for this place' : 'Nothing matches these filters'}>
+          {articles.length === 0 ? 'Pick one of the cities above, or type any city and press Search.' : 'Try another category or tone.'}
+        </EmptyState>
       )}
 
       {/* AI Chat */}

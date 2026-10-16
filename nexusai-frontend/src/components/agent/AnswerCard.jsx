@@ -1,11 +1,9 @@
 import { useState } from 'react';
-import { ExternalLink, ChevronDown, CheckCircle2, XCircle, Clock, Wrench, ThumbsUp, ThumbsDown, Bookmark, Check } from 'lucide-react';
+import { ChevronDown, Check, X, Brain, Wrench, ThumbsUp, ThumbsDown, Bookmark } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../api/axios';
 import QuizCard from './QuizCard';
 import { toolLabel, isSafeUrl, seconds, argsPreview } from './agentUi';
-
-const sectionLabel = { fontSize: 12, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 };
 
 // The AI sometimes writes **bold**. Show it as bold instead of literal
 // asterisks, without ever injecting HTML (text stays text).
@@ -24,36 +22,29 @@ function TraceView({ result }) {
   const slowest = Math.max(...trace.map((t) => t.ms), ...result.steps.map((s) => s.ms), 1);
 
   return (
-    <div style={{ marginTop: 14 }}>
-      <div style={sectionLabel}>Trace</div>
-      <div style={{ display: 'grid', gap: 10 }}>
-        {trace.map((t) => (
-          <div key={t.round} style={{ fontSize: 12 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, color: 'var(--text2)' }}>
-              <span>Model call {t.round}{t.model ? ` · ${t.model}` : ''}</span>
-              <span>{seconds(t.ms)}{t.tokens ? ` · ${t.tokens} tokens` : ''}</span>
-            </div>
-            <div style={{ height: 6, background: 'var(--bg)', borderRadius: 3, marginTop: 3 }}>
-              <div style={{ height: 6, width: `${Math.max((t.ms / slowest) * 100, 2)}%`, background: 'var(--green)', borderRadius: 3 }} />
-            </div>
-            {result.steps.filter((s) => s.round === t.round).map((s, i) => (
-              <div key={i} style={{ marginLeft: 14, marginTop: 4 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, color: 'var(--text3)' }}>
-                  <span>↳ {toolLabel(s.tool)}</span>
-                  <span>{s.ms}ms</span>
+    <div style={{ marginTop: 18 }}>
+      <div className="ans-label" style={{ marginTop: 0 }}>Timing</div>
+      <ol className="tl">
+        {trace.map((t, n) => (
+          <li key={t.round} className="tl-item" style={{ '--i': n }}>
+            <span className="tl-dot ok"><Brain size={12} /></span>
+            <div className="tl-main">
+              <span className="tl-ms">{seconds(t.ms)}{t.tokens ? ` · ${t.tokens} tokens` : ''}</span>
+              Model call {t.round}{t.model ? <small>{t.model}</small> : null}
+              <div className="tbar"><i style={{ '--w': `${Math.max((t.ms / slowest) * 100, 2)}%` }} /></div>
+              {result.steps.filter((s) => s.round === t.round).map((s, i) => (
+                <div key={i} style={{ marginTop: 8 }}>
+                  <span className="tl-ms">{s.ms}ms</span>
+                  <span style={{ color: 'var(--text2)', fontSize: 13 }}>↳ {toolLabel(s.tool)}</span>
+                  <div className={`tbar sub ${s.ok ? '' : 'bad'}`}><i style={{ '--w': `${Math.max((s.ms / slowest) * 100, 2)}%` }} /></div>
                 </div>
-                <div style={{ height: 4, background: 'var(--bg)', borderRadius: 2, marginTop: 2 }}>
-                  <div style={{ height: 4, width: `${Math.max((s.ms / slowest) * 100, 2)}%`, background: s.ok ? 'var(--text3)' : 'var(--red)', borderRadius: 2 }} />
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </li>
         ))}
-      </div>
+      </ol>
       {result.meta?.models?.length > 1 && (
-        <p style={{ fontSize: 12, color: 'var(--amber)', marginTop: 8 }}>
-          The main model was unavailable, so the backup model finished this answer.
-        </p>
+        <p className="ans-note">The main model was unavailable, so the backup model finished this answer.</p>
       )}
     </div>
   );
@@ -90,39 +81,34 @@ export default function AnswerCard({ turn, onFollowUp, onRated, busy }) {
     }
   }
 
+  const safeSources = (result.sources || []).filter((s) => isSafeUrl(s.url));
+
   return (
-    <div className="card card-featured">
-      <p style={{ fontSize: 15, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{renderInline(result.answer)}</p>
+    <div className="card card-featured ans">
+      <p className="ans-text">{renderInline(result.answer)}</p>
 
       {result.meta?.format === 'plain' && (
-        <p style={{ fontSize: 12, color: 'var(--amber)', marginTop: 8 }}>
-          The AI replied in an unexpected format, so no sources could be verified.
-        </p>
+        <p className="ans-note">The AI replied in an unexpected format, so no sources could be verified.</p>
       )}
       {result.meta?.stoppedReason !== 'answered' && (
-        <p style={{ fontSize: 12, color: 'var(--amber)', marginTop: 8 }}>
+        <p className="ans-note">
           The agent hit its {result.meta?.stoppedReason === 'timeout' ? 'time' : 'step'} limit before finishing.
         </p>
       )}
 
-      {/* Sources */}
-      {result.sources?.length > 0 && (
-        <div style={{ marginTop: 14 }}>
-          <div style={sectionLabel}>Sources</div>
-          <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 6 }}>
-            {result.sources.filter((s) => isSafeUrl(s.url)).map((s) => (
-              <li key={s.url}>
-                <a href={s.url} target="_blank" rel="noopener noreferrer"
-                  style={{ color: 'var(--green)', fontSize: 14, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                  <ExternalLink size={13} /> {s.title || s.url}
-                </a>
-              </li>
+      {safeSources.length > 0 && (
+        <>
+          <div className="ans-label">Sources</div>
+          <div className="src-row">
+            {safeSources.map((s, i) => (
+              <a key={s.url} className="src" href={s.url} target="_blank" rel="noopener noreferrer" title={s.title || s.url}>
+                <b>{i + 1}</b><span>{s.title || s.url}</span>
+              </a>
             ))}
-          </ul>
-        </div>
+          </div>
+        </>
       )}
 
-      {/* Quiz the agent generated */}
       {result.quiz && <QuizCard quiz={result.quiz} />}
 
       {/* Actions the agent PROPOSED: nothing happens until the user confirms */}
@@ -130,9 +116,9 @@ export default function AnswerCard({ turn, onFollowUp, onRated, busy }) {
         const state = actions[action.articleId];
         if (state === 'dismissed') return null;
         return (
-          <div key={action.articleId} style={{ marginTop: 14, background: 'var(--bg3)', borderRadius: 'var(--radius)', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <div key={action.articleId} className="propose">
             <Bookmark size={15} color="var(--green)" />
-            <span style={{ fontSize: 13, flex: 1, minWidth: 180 }}>Save “{action.title}” to your saved articles?</span>
+            <span>Save “{action.title}” to your saved articles?</span>
             {state === 'saved' ? (
               <span style={{ fontSize: 13, color: 'var(--green)', display: 'inline-flex', alignItems: 'center', gap: 4 }}><Check size={14} /> Saved</span>
             ) : (
@@ -149,68 +135,54 @@ export default function AnswerCard({ turn, onFollowUp, onRated, busy }) {
         );
       })}
 
-      {/* Suggested next questions */}
       {result.followUps?.length > 0 && (
-        <div style={{ marginTop: 14, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        <div className="followups">
           {result.followUps.map((f) => (
-            <button key={f} type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => onFollowUp(f)}>
-              {f}
-            </button>
+            <button key={f} type="button" className="chip" disabled={busy} onClick={() => onFollowUp(f)}>{f}</button>
           ))}
         </div>
       )}
 
-      {/* Feedback */}
-      <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontSize: 12, color: 'var(--text3)' }}>Was this helpful?</span>
-        <button type="button" className="btn btn-ghost btn-sm" aria-label="Helpful" aria-pressed={rating === 'up'} onClick={() => rate('up')}
-          style={rating === 'up' ? { color: 'var(--green)', borderColor: 'var(--green)' } : undefined}>
+      <div className="rate">
+        <span>Was this helpful?</span>
+        <button type="button" className={`btn btn-ghost btn-sm ${rating === 'up' ? 'on-up' : ''}`} aria-label="Helpful" aria-pressed={rating === 'up'} onClick={() => rate('up')}>
           <ThumbsUp size={14} />
         </button>
-        <button type="button" className="btn btn-ghost btn-sm" aria-label="Not helpful" aria-pressed={rating === 'down'} onClick={() => rate('down')}
-          style={rating === 'down' ? { color: 'var(--red)', borderColor: 'var(--red)' } : undefined}>
+        <button type="button" className={`btn btn-ghost btn-sm ${rating === 'down' ? 'on-down' : ''}`} aria-label="Not helpful" aria-pressed={rating === 'down'} onClick={() => rate('down')}>
           <ThumbsDown size={14} />
         </button>
       </div>
 
-      {/* Steps taken + trace — the part that visibly shows it's an agent */}
-      <details style={{ marginTop: 16, borderTop: '1px solid var(--border)', paddingTop: 12 }}>
-        <summary style={{ cursor: 'pointer', fontSize: 13, color: 'var(--text2)', display: 'flex', alignItems: 'center', gap: 6, listStyle: 'none' }}>
+      {/* Steps taken + trace: the part that visibly shows it's an agent */}
+      <details className="trace">
+        <summary className="trace-sum">
           <ChevronDown size={14} />
           Steps taken ({result.steps.length} tool call{result.steps.length === 1 ? '' : 's'}
           {result.meta ? ` · ${result.meta.rounds} model call${result.meta.rounds === 1 ? '' : 's'} · ${seconds(result.meta.durationMs)}` : ''})
         </summary>
 
         {result.steps.length === 0 ? (
-          <p style={{ fontSize: 13, color: 'var(--text3)', marginTop: 10 }}>The AI answered without using any tools.</p>
+          <p className="meta" style={{ marginTop: 10 }}>The AI answered without using any tools.</p>
         ) : (
-          <ol style={{ listStyle: 'none', padding: 0, margin: '12px 0 0', display: 'grid', gap: 8 }}>
+          <ol className="tl" style={{ marginTop: 14 }}>
             {result.steps.map((s, i) => (
-              <li key={i} style={{ background: 'var(--bg3)', borderRadius: 'var(--radius)', padding: '8px 12px', fontSize: 13 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <span style={{ color: 'var(--text3)' }}>{i + 1}.</span>
-                  <Wrench size={13} color="var(--text2)" />
+              <li key={i} className="tl-item" style={{ '--i': i }}>
+                <span className={`tl-dot ${s.ok ? 'ok' : 'bad'}`}>{s.ok ? <Check size={12} /> : <X size={12} />}</span>
+                <div className="tl-main">
+                  <span className="tl-ms">{s.ms}ms</span>
+                  <Wrench size={12} style={{ marginRight: 6, verticalAlign: '-1px', color: 'var(--text3)' }} />
                   <strong>{toolLabel(s.tool)}</strong>
-                  {s.ok ? <CheckCircle2 size={14} color="var(--green)" /> : <XCircle size={14} color="var(--red)" />}
-                  <span style={{ marginLeft: 'auto', color: 'var(--text3)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                    <Clock size={12} /> {s.ms}ms
-                  </span>
+                  {s.args && Object.keys(s.args).length > 0 && <small>{argsPreview(s.args)}</small>}
+                  <small style={{ color: s.ok ? 'var(--text2)' : 'var(--red)' }}>→ {s.summary}</small>
                 </div>
-                {s.args && Object.keys(s.args).length > 0 && (
-                  <div style={{ color: 'var(--text3)', marginTop: 4, wordBreak: 'break-word' }}>{argsPreview(s.args)}</div>
-                )}
-                <div style={{ color: s.ok ? 'var(--text2)' : 'var(--red)', marginTop: 4 }}>→ {s.summary}</div>
               </li>
             ))}
           </ol>
         )}
 
         <TraceView result={result} />
-        {result.meta?.totalTokens > 0 && (
-          <p style={{ fontSize: 12, color: 'var(--text3)', marginTop: 10 }}>{result.meta.totalTokens} tokens used</p>
-        )}
+        {result.meta?.totalTokens > 0 && <p className="meta" style={{ marginTop: 12 }}>{result.meta.totalTokens} tokens used</p>}
       </details>
-
     </div>
   );
 }

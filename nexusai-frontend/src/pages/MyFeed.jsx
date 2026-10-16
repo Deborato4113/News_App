@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Star, X } from 'lucide-react';
+import { Star, X, Plus, MapPin } from 'lucide-react';
 import api from '../api/axios';
 import ArticleCard from '../components/ArticleCard';
+import ArticleSkeleton from '../components/ArticleSkeleton';
+import PageHeader from '../components/PageHeader';
+import EmptyState from '../components/EmptyState';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -14,6 +17,7 @@ export default function MyFeed() {
   const [following, setFollowing] = useState(false);
   const [articles, setArticles] = useState([]);
   const [loading, setLoading]   = useState(false);
+  const [only, setOnly]         = useState('all');
 
   // Fetches cached articles for every followed region in parallel and
   // merges them into one feed sorted by recency. Reuses the existing
@@ -74,65 +78,78 @@ export default function MyFeed() {
     }
   }
 
+  const SUGGESTED = ['mumbai', 'delhi', 'bangalore', 'london', 'singapore'].filter((r) => !followedRegions.includes(r));
+  const shown = only === 'all' || !followedRegions.includes(only) ? articles : articles.filter((a) => a.region === only);
+
+  async function quickFollow(region) {
+    setFollowing(true);
+    try {
+      await followRegion(region);
+      toast.success(`Following ${region}`);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Could not follow region.');
+    }
+    setFollowing(false);
+  }
+
   return (
     <div className="page">
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-        <Star size={22} color="var(--green)" />
-        <h1 className="display" style={{ fontSize: 26 }}>My Feed</h1>
-      </div>
-      <p style={{ fontSize: 14, color: 'var(--text2)', marginBottom: '1.25rem' }}>
-        Follow up to 6 regions and see their news merged into one feed.
-      </p>
+      <PageHeader icon={Star} title="My Feed" sub="Follow up to 6 regions and read their news merged into one feed.">
+        <span className="meta"><b>{followedRegions.length}</b>/6 regions</span>
+      </PageHeader>
 
-      {/* Followed region chips */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: '1rem' }}>
+      <div className="chip-row">
+        {followedRegions.length > 0 && (
+          <button className={`chip ${only === 'all' ? 'active' : ''}`} onClick={() => setOnly('all')}>All regions</button>
+        )}
         {followedRegions.map((r) => (
-          <span key={r} className="badge badge-general" style={{ display: 'flex', alignItems: 'center', gap: 6, textTransform: 'capitalize', padding: '5px 10px' }}>
-            {r}
-            <button onClick={() => handleUnfollow(r)} title={`Unfollow ${r}`}
-              style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', display: 'flex' }}>
-              <X size={12} />
-            </button>
+          <span key={r} className={`chip region ${only === r ? 'active' : ''}`}>
+            <button style={{ background: 'none', border: 'none', color: 'inherit', textTransform: 'capitalize' }} onClick={() => setOnly(r)}>{r}</button>
+            <button className="chip-x" onClick={() => handleUnfollow(r)} aria-label={`Unfollow ${r}`} title={`Unfollow ${r}`}><X size={12} /></button>
           </span>
         ))}
-        {followedRegions.length === 0 && (
-          <span style={{ fontSize: 13, color: 'var(--text3)' }}>You're not following any regions yet.</span>
-        )}
       </div>
 
-      {/* Add region */}
       {followedRegions.length < 6 && (
-        <form onSubmit={handleFollow} style={{ display: 'flex', gap: 8, marginBottom: '1.5rem' }}>
-          <input className="input" placeholder="Add a region — e.g. Mumbai, Delhi, London"
-            value={input} onChange={e => setInput(e.target.value)} />
-          <button className="btn btn-primary btn-sm" type="submit" disabled={following || !input.trim()}>
-            {following ? <div className="spinner" /> : 'Follow'}
-          </button>
-        </form>
+        <>
+          <form onSubmit={handleFollow} className="toolbar">
+            <div className="search-field">
+              <MapPin size={15} />
+              <input className="input" aria-label="Add a region" placeholder="Add a region, e.g. Mumbai, Delhi, London"
+                value={input} onChange={e => setInput(e.target.value)} />
+            </div>
+            <button className="btn btn-primary" type="submit" disabled={following || !input.trim()}>
+              {following ? <div className="spinner" /> : <Plus size={15} />} Follow
+            </button>
+          </form>
+          {SUGGESTED.length > 0 && (
+            <div className="chip-row">
+              <span className="meta" style={{ alignSelf: 'center' }}>Suggested</span>
+              {SUGGESTED.slice(0, 4).map((r) => (
+                <button key={r} className="chip region" disabled={following} onClick={() => quickFollow(r)}><Plus size={12} /> {r}</button>
+              ))}
+            </div>
+          )}
+        </>
       )}
 
-      {/* Feed */}
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text2)' }}>
-          <div className="spinner-lg" style={{ margin: '0 auto 1rem' }} />
-          Loading your feed…
-        </div>
+        <ArticleSkeleton count={4} />
       ) : followedRegions.length === 0 ? (
-        <div className="empty">
-          <div className="empty-icon">⭐</div>
-          <div className="empty-title">Follow a region to get started</div>
-          <p style={{ fontSize: 14, marginTop: 6 }}>Add one or more regions above to see their news here.</p>
-        </div>
+        <EmptyState icon={Star} title="Follow a region to get started">
+          Pick one or more regions above and their latest stories will be merged here, newest first.
+        </EmptyState>
       ) : articles.length === 0 ? (
-        <div className="empty">
-          <div className="empty-icon">📰</div>
-          <div className="empty-title">Nothing cached yet</div>
-          <p style={{ fontSize: 14, marginTop: 6 }}>Visit the Dashboard and search each followed region once to populate this feed.</p>
-        </div>
+        <EmptyState icon={MapPin} title="Nothing cached yet">
+          Open the Dashboard and search each followed region once to populate this feed.
+        </EmptyState>
       ) : (
-        <div style={{ display: 'grid', gap: 10 }}>
-          {articles.map((a, i) => <ArticleCard key={a._id || i} article={a} />)}
-        </div>
+        <>
+          <p className="meta" style={{ marginBottom: 10 }}><b>{shown.length}</b> stories{only !== 'all' && followedRegions.includes(only) ? ` from ${only}` : ''}</p>
+          <div className="grid-list reveal-list" key={only}>
+            {shown.map((a, i) => <div key={a._id || i} style={{ '--i': i }}><ArticleCard article={a} siblings={shown} /></div>)}
+          </div>
+        </>
       )}
     </div>
   );

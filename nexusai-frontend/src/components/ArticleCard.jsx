@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { ExternalLink, ShieldAlert, Heart, Bookmark, MessageCircle, Languages, Loader2 } from 'lucide-react';
+import { ExternalLink, ShieldAlert, Heart, Bookmark, MessageCircle, Languages, Loader2, PanelRightOpen } from 'lucide-react';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
 import CommentSection from './CommentSection';
+import useReader from '../hooks/useReader';
 
 const BADGE = {
   Politics: 'badge-politics', Business: 'badge-business',
@@ -25,7 +26,8 @@ function timeAgo(dateStr) {
   return `${Math.floor(diff / 1440)}d ago`;
 }
 
-export default function ArticleCard({ article, featured, onSaveChange, index = 0 }) {
+export default function ArticleCard({ article, featured, onSaveChange, index = 0, siblings }) {
+  const reader = useReader();
   const {
     _id, title, summary, description, source, publishedAt, category, sentiment, url,
     biasLevel, factCheckNote,
@@ -74,8 +76,19 @@ export default function ArticleCard({ article, featured, onSaveChange, index = 0
       setSaved(r.data.saved);
       setSaveCount(r.data.saveCount);
       if (r.data.saved) setSavePop((n) => n + 1);
-      toast.success(r.data.saved ? 'Saved' : 'Removed from saved');
-      onSaveChange?.(_id, r.data.saved);
+      if (onSaveChange) {
+        // the parent list owns the feedback (it can restore the card on undo)
+        onSaveChange(_id, r.data.saved, article);
+      } else if (r.data.saved) {
+        toast.success('Saved');
+      } else {
+        toast((t) => (
+          <span className="undo-toast">
+            Removed from saved
+            <button type="button" onClick={() => { toast.dismiss(t.id); toggleSave(); }}>Undo</button>
+          </span>
+        ), { duration: 5000 });
+      }
     } catch {
       toast.error('Could not update saved articles.');
     }
@@ -122,7 +135,7 @@ export default function ArticleCard({ article, featured, onSaveChange, index = 0
       </h3>
 
       {/* Summary */}
-      <p style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.65 }}>
+      <p className="a-summary" style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.65 }}>
         {summary || description || 'No summary available.'}
       </p>
 
@@ -165,6 +178,10 @@ export default function ArticleCard({ article, featured, onSaveChange, index = 0
           <button className={`act${saved ? ' on-green' : ''}`} onClick={toggleSave} disabled={saving || !_id}
             aria-pressed={saved} aria-label={saved ? 'Remove from saved' : 'Save article'} title={saved ? 'Remove from saved' : 'Save article'}>
             <Bookmark key={savePop} size={14} fill={saved ? 'currentColor' : 'none'} className={savePop ? 'pop' : ''} /> {saveCount || ''}
+          </button>
+
+          <button className="act" onClick={() => reader.open(article, siblings)} aria-label="Open in reader" title="Open in reader">
+            <PanelRightOpen size={14} /> Read
           </button>
 
           <button className="act" onClick={() => setShowComments(s => !s)} disabled={!_id} aria-expanded={showComments}>

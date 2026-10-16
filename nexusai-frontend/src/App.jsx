@@ -7,6 +7,9 @@ import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ScrollProgress from './components/ScrollProgress';
 import CommandPalette from './components/CommandPalette';
+import Shortcuts from './components/Shortcuts';
+import ServerStatus from './components/ServerStatus';
+import ReaderProvider from './components/ReaderProvider';
 import Landing from './pages/Landing';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
@@ -19,6 +22,7 @@ import SavedArticles from './pages/SavedArticles';
 import SearchPage from './pages/SearchPage';
 import MyFeed from './pages/MyFeed';
 import AskNexus from './pages/AskNexus';
+import NotFound from './pages/NotFound';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -42,7 +46,7 @@ function Home() {
 
 const TITLES = {
   '/': 'News', '/ask': 'Ask AI', '/quiz': 'Quiz', '/feed': 'My feed', '/saved': 'Saved articles',
-  '/search': 'Search', '/admin': 'Admin', '/login': 'Log in', '/signup': 'Sign up',
+  '/search': 'Search', '/admin': 'Admin', '/forgot-password': 'Reset password', '/login': 'Log in', '/signup': 'Sign up',
 };
 
 // On every page change: back to the top and a page-specific tab title.
@@ -62,6 +66,8 @@ function AppRoutes() {
       <RouteEffects />
       <ScrollProgress />
       <CommandPalette />
+      <Shortcuts />
+      <ServerStatus />
       <Navbar />
       <div key={pathname} className="route">
       <Routes>
@@ -76,7 +82,7 @@ function AppRoutes() {
         <Route path="/signup"          element={<Signup />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password"  element={<ResetPassword />} />
-        <Route path="*"                element={<Navigate to="/" replace />} />
+        <Route path="*"                element={<NotFound />} />
       </Routes>
       </div>
       <Footer />
@@ -90,7 +96,9 @@ export default function App() {
       <AuthProvider>
         <BrowserRouter>
           <Toaster position="top-right" toastOptions={{ duration: 3000, className: 'toast-card' }} />
-          <AppRoutes />
+          <ReaderProvider>
+            <AppRoutes />
+          </ReaderProvider>
         </BrowserRouter>
       </AuthProvider>
     </ErrorBoundary>

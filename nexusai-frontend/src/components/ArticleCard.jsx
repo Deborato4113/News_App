@@ -11,12 +11,6 @@ const BADGE = {
   Weather: 'badge-weather', Health: 'badge-health', General: 'badge-general',
 };
 
-const BIAS_COLOR = {
-  low:    { bg: '#14352a', color: '#5DCAA5' },
-  medium: { bg: '#3d2e0a', color: '#f5be6a' },
-  high:   { bg: '#3d1a1a', color: '#f08080' },
-};
-
 const LANGUAGES = ['Hindi', 'Bengali', 'Tamil', 'Telugu', 'Marathi', 'Spanish', 'French', 'Arabic'];
 
 function timeAgo(dateStr) {
@@ -118,7 +112,7 @@ export default function ArticleCard({ article, featured, onSaveChange, index = 0
           {sentiment === 'pos' ? '↑ positive' : sentiment === 'neg' ? '↓ negative' : '• neutral'}
         </span>
         {biasLevel && biasLevel !== 'low' && (
-          <span className="badge" style={{ background: BIAS_COLOR[biasLevel].bg, color: BIAS_COLOR[biasLevel].color }}
+          <span className={`badge bias-${biasLevel}`}
             title="AI-estimated framing bias — not a definitive judgment">
             <ShieldAlert size={11} style={{ marginRight: 3 }} />
             {biasLevel} bias
@@ -141,11 +135,8 @@ export default function ArticleCard({ article, featured, onSaveChange, index = 0
 
       {/* Fact-check note */}
       {factCheckNote && (
-        <p style={{
-          fontSize: 12, color: '#f5be6a', background: '#3d2e0a', borderRadius: 6,
-          padding: '6px 10px', lineHeight: 1.5, display: 'flex', gap: 6, alignItems: 'flex-start',
-        }}>
-          <ShieldAlert size={13} style={{ flexShrink: 0, marginTop: 1 }} />
+        <p className="factnote">
+          <ShieldAlert size={13} />
           {factCheckNote}
         </p>
       )}

@@ -45,7 +45,12 @@ export default function Dashboard() {
   const inputRef = useRef();
   const [dateline] = useState(() => new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' }));
 
-  useEffect(() => { fetchNews(false, 'Mumbai'); }, []);
+  // Load the default city once on mount. fetchNews is recreated every render
+  // and reads current state, so listing it as a dependency would refetch forever.
+  useEffect(() => {
+    fetchNews(false, 'Mumbai');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function saveHistory(city) {
     const updated = [city, ...history.filter(h => h.toLowerCase() !== city.toLowerCase())].slice(0, 5);
@@ -210,7 +215,7 @@ export default function Dashboard() {
       {articles.length > 0 && !loading && (
         <div className="stat-grid">
           <StatTile label="Articles" value={articles.length} color="var(--green)" />
-          <StatTile label="Positive tone" value={pos} icon={<TrendingUp size={15} />} color="#5DCAA5" />
+          <StatTile label="Positive tone" value={pos} icon={<TrendingUp size={15} />} color="var(--green)" />
           <StatTile label="Negative tone" value={neg} icon={<TrendingDown size={15} />} color="var(--red)" />
           <StatTile label="Sources" value={srcs} icon={<Newspaper size={15} />} color="var(--amber)" />
         </div>

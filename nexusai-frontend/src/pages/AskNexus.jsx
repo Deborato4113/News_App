@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Bot, Send, Square, MessageSquarePlus, Sparkles } from 'lucide-react';
+import PageHeader from '../components/PageHeader';
 import api from '../api/axios';
 import { streamAsk } from '../api/agentStream';
 import { useAuth } from '../context/AuthContext';
@@ -30,8 +31,8 @@ async function fetchStats(isAdmin) {
 function Tile({ title, value }) {
   return (
     <div>
-      <div style={{ fontSize: 11, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>{title}</div>
-      <div style={{ fontSize: 20, fontWeight: 600, color: 'var(--green)' }}>{value}</div>
+      <div className="an-l">{title}</div>
+      <div className="an-v">{value}</div>
     </div>
   );
 }
@@ -43,14 +44,12 @@ function StatsPanel({ stats }) {
   if (stats.all) rows.push(['All users', stats.all]);
 
   return (
-    <div style={{ marginTop: '2rem' }}>
-      <div style={{ fontSize: 12, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
-        Agent analytics
-      </div>
+    <section className="analytics" aria-label="Agent analytics">
+      <div className="ans-label" style={{ marginTop: 0 }}>Agent analytics</div>
       {rows.map(([label, s]) => (
-        <div key={label} className="card" style={{ marginBottom: 10, padding: '0.9rem 1rem' }}>
-          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{label}</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 10 }}>
+        <div key={label} className="card">
+          <div className="an-title">{label}</div>
+          <div className="an-grid">
             <Tile title="Questions" value={s.totalRuns} />
             <Tile title="Avg response" value={seconds(s.avgDurationMs)} />
             <Tile title="Avg tool calls" value={s.avgSteps} />
@@ -61,19 +60,19 @@ function StatsPanel({ stats }) {
             />
           </div>
           {s.feedback?.rated > 0 && (
-            <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 8 }}>
+            <div className="an-note">
               Based on {s.feedback.rated} rated answer{s.feedback.rated === 1 ? '' : 's'} ({s.feedback.up} 👍 · {s.feedback.down} 👎)
             </div>
           )}
           {s.topTools.length > 0 && (
-            <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 10 }}>
+            <div className="an-note top">
               Most used:{' '}
               {s.topTools.map((t) => `${toolLabel(t.tool)} (${t.count})`).join(' · ')}
             </div>
           )}
         </div>
       ))}
-    </div>
+    </section>
   );
 }
 
@@ -176,40 +175,32 @@ export default function AskNexus() {
 
   return (
     <div className="page" style={{ maxWidth: 760 }}>
-      <div style={{ marginBottom: '1.5rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-          <Bot size={22} color="var(--green)" />
-          <h1 className="display" style={{ fontSize: 26 }}>Ask NexusAI</h1>
-          {thread.length > 0 && (
-            <button type="button" className="btn btn-ghost btn-sm" style={{ marginLeft: 'auto' }} onClick={newConversation}>
-              <MessageSquarePlus size={14} /> New conversation
-            </button>
-          )}
-        </div>
-        <p style={{ fontSize: 14, color: 'var(--text2)' }}>
-          Ask in plain English. The AI picks its own tools — searching news, comparing regions, building your briefing,
-          checking your quiz history — and shows its work. Follow-up questions remember the conversation.
-        </p>
-      </div>
+      <PageHeader
+        icon={Bot}
+        title="Ask NexusAI"
+        sub="Ask in plain English. The AI picks its own tools (searching news, comparing regions, building your briefing, checking your quiz history) and shows its work. Follow-ups remember the conversation."
+      >
+        {thread.length > 0 && (
+          <button type="button" className="btn btn-ghost btn-sm" onClick={newConversation}>
+            <MessageSquarePlus size={14} /> New conversation
+          </button>
+        )}
+      </PageHeader>
 
       {/* Conversation */}
-      <div style={{ display: 'grid', gap: 16, marginBottom: '1rem' }}>
+      <div className="thread">
         {thread.map((turn) => (
           <div key={turn.id}>
-            <div style={{ fontSize: 13, color: 'var(--text3)', marginBottom: 6 }}>You asked: {turn.question}</div>
+            <div className="you-asked">You asked: <b>{turn.question}</b></div>
 
             {turn.status === 'running' && (
               <div className="card">
-                <div style={{ fontSize: 13, color: 'var(--text2)' }}>The agent is working…</div>
+                <div className="meta">The agent is working…</div>
                 <ProgressList progress={turn.progress} />
               </div>
             )}
 
-            {turn.status === 'error' && (
-              <div className="card" style={{ borderLeft: '3px solid var(--red)', color: 'var(--text2)', fontSize: 14 }}>
-                {turn.error}
-              </div>
-            )}
+            {turn.status === 'error' && <div className="card card-err">{turn.error}</div>}
 
             {turn.status === 'done' && (
               <AnswerCard turn={turn} busy={loading} onFollowUp={(f) => handleAsk(null, f)} onRated={refreshStats} />
@@ -231,20 +222,20 @@ export default function AskNexus() {
       )}
 
       {/* Question box */}
-      <form onSubmit={handleAsk} className="card" style={{ marginBottom: '1rem' }}>
+      <form onSubmit={handleAsk} className="card ask-form">
         <textarea
           className="input"
           rows={3}
           maxLength={MAX_LEN}
+          aria-label="Your question"
           placeholder={thread.length ? 'Ask a follow-up…' : "e.g. What's the latest on flooding in Mumbai, and how reliable is the coverage?"}
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleAsk(e); }}
-          style={{ resize: 'vertical', fontFamily: 'inherit' }}
           disabled={loading}
         />
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, gap: 8 }}>
-          <span style={{ fontSize: 12, color: 'var(--text3)' }}>{question.length}/{MAX_LEN}</span>
+        <div className="ask-foot">
+          <span className="meta">{question.length}/{MAX_LEN}</span>
           {loading ? (
             <button className="btn btn-ghost" type="button" onClick={stop}>
               <Square size={13} /> Stop

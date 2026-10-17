@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, Search as SearchIcon, Newspaper, BrainCircuit, ShieldCheck, Star, Bookmark, Search, Bot, Menu, X } from 'lucide-react';
+import { LogOut, Search as SearchIcon, Newspaper, BrainCircuit, ShieldCheck, Star, Bookmark, Search, Bot, Menu, X, Sun, Moon } from 'lucide-react';
 import toast from 'react-hot-toast';
+import useTheme from '../hooks/useTheme';
 
 // One link style everywhere; NavLink adds the "active" class for the current page.
 function Item({ to, icon: Icon, children, onClick, end }) {
@@ -17,6 +18,7 @@ export default function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [theme, toggleTheme] = useTheme();
   const close = () => setOpen(false);
 
   function handleLogout() {
@@ -56,6 +58,12 @@ export default function Navbar() {
               <button type="button" className="nav-search" onClick={() => { close(); window.dispatchEvent(new Event('nexus:palette')); }} aria-label="Quick find">
                 <SearchIcon size={14} aria-hidden="true" /> <span className="lbl">Quick find</span> <kbd className="kbd">Ctrl K</kbd>
               </button>
+              <button type="button" className="nav-link theme-btn" onClick={toggleTheme}
+                aria-label={theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'}
+                title={theme === 'light' ? 'Dark theme' : 'Light theme'}>
+                {theme === 'light' ? <Moon size={15} aria-hidden="true" /> : <Sun size={15} aria-hidden="true" />}
+                <span className="lbl">{theme === 'light' ? 'Dark theme' : 'Light theme'}</span>
+              </button>
               <div className="nav-sep" />
               <span className="nav-user">
                 <span className="avatar" aria-hidden="true">{(user.name || '?').trim().charAt(0).toUpperCase()}</span>
@@ -65,6 +73,12 @@ export default function Navbar() {
             </>
           ) : (
             <>
+              <button type="button" className="nav-link theme-btn" onClick={toggleTheme}
+                aria-label={theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'}
+                title={theme === 'light' ? 'Dark theme' : 'Light theme'}>
+                {theme === 'light' ? <Moon size={15} aria-hidden="true" /> : <Sun size={15} aria-hidden="true" />}
+                <span className="lbl">{theme === 'light' ? 'Dark theme' : 'Light theme'}</span>
+              </button>
               <Link to="/login" className="nav-link" onClick={close}>Log in</Link>
               <Link to="/signup" className="btn btn-primary btn-sm" onClick={close}>Get started</Link>
             </>

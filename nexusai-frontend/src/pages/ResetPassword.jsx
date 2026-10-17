@@ -74,7 +74,7 @@ export default function ResetPassword() {
             <input className="input" type="password" placeholder="••••••••"
               value={confirm} onChange={e => setConfirm(e.target.value)} required />
           </div>
-          <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}
+          <button className="btn btn-primary btn-block"
             type="submit" disabled={loading}>
             {loading ? <div className="spinner" /> : 'Reset password'}
           </button>

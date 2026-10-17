@@ -32,7 +32,7 @@ export default function ForgotPassword() {
         {error && <div className="auth-error">{error}</div>}
 
         {sent ? (
-          <p style={{ fontSize: 14, color: 'var(--text2)', lineHeight: 1.6 }}>
+          <p className="auth-note">
             If that email is registered, a reset link is on its way. Check your inbox (and spam folder).
           </p>
         ) : (
@@ -42,7 +42,7 @@ export default function ForgotPassword() {
               <input className="input" type="email" placeholder="you@email.com"
                 value={email} onChange={e => setEmail(e.target.value)} required autoFocus />
             </div>
-            <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}
+            <button className="btn btn-primary btn-block"
               type="submit" disabled={loading}>
               {loading ? <div className="spinner" /> : 'Send reset link'}
             </button>

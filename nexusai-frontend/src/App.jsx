@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -14,15 +14,15 @@ import Landing from './pages/Landing';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
-import ForgotPassword from './pages/ForgotPassword';
-import ResetPassword from './pages/ResetPassword';
-import Quiz from './pages/Quiz';
-import AdminDashboard from './pages/AdminDashboard';
-import SavedArticles from './pages/SavedArticles';
-import SearchPage from './pages/SearchPage';
-import MyFeed from './pages/MyFeed';
-import AskNexus from './pages/AskNexus';
-import NotFound from './pages/NotFound';
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const Quiz = lazy(() => import('./pages/Quiz'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const SavedArticles = lazy(() => import('./pages/SavedArticles'));
+const SearchPage = lazy(() => import('./pages/SearchPage'));
+const MyFeed = lazy(() => import('./pages/MyFeed'));
+const AskNexus = lazy(() => import('./pages/AskNexus'));
+const NotFound = lazy(() => import('./pages/NotFound'));
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -70,6 +70,7 @@ function AppRoutes() {
       <ServerStatus />
       <Navbar />
       <div key={pathname} className="route">
+      <Suspense fallback={<div className="loading-screen" style={{ height: '50vh' }}><div className="spinner-lg" /></div>}>
       <Routes>
         <Route path="/"                element={<Home />} />
         <Route path="/quiz"            element={<ProtectedRoute><Quiz /></ProtectedRoute>} />
@@ -84,6 +85,7 @@ function AppRoutes() {
         <Route path="/reset-password"  element={<ResetPassword />} />
         <Route path="*"                element={<NotFound />} />
       </Routes>
+      </Suspense>
       </div>
       <Footer />
     </>

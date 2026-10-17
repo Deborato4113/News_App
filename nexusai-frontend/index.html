@@ -6,7 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>NexusAI — Regional Current Affairs</title>
     <meta name="description" content="NexusAI delivers AI-summarized regional current affairs, quizzes, and a news Q&A assistant tailored to your city." />
-    <meta name="theme-color" content="#0f172a" />
+    <meta name="theme-color" content="#0E0F11" />
+    <meta name="color-scheme" content="dark light" />
+    <script>
+      // Apply the saved theme before first paint so there is no flash.
+      try { var t = localStorage.getItem("nexusai_theme"); if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t); } catch (e) {}
+    </script>
 
     <!-- Open Graph -->
     <meta property="og:type" content="website" />

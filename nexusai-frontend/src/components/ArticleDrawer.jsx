@@ -70,7 +70,7 @@ export default function ArticleDrawer({ article, position, total, onPrev, onNext
           <p className="drawer-text">{summary || description || 'No summary available.'}</p>
 
           {factCheckNote && (
-            <p className="why" style={{ borderColor: 'var(--amber)', color: '#f5be6a' }}>
+            <p className="why" style={{ borderColor: 'var(--amber)', color: 'var(--amber)' }}>
               <ShieldAlert size={13} style={{ verticalAlign: '-2px', marginRight: 6 }} />{factCheckNote}
             </p>
           )}

@@ -21,37 +21,31 @@ export default function AskAI({ region }) {
   }
 
   return (
-    <div style={{ marginTop: '2rem' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-        <Bot size={16} color="var(--green)" />
-        <span style={{ fontSize: 13, color: 'var(--text2)', fontWeight: 500 }}>
-          Ask AI about today's news
-        </span>
+    <section className="askai" aria-label="Ask AI about today's news">
+      <div className="askai-head">
+        <Bot size={16} aria-hidden="true" />
+        <span>Ask AI about today's news</span>
       </div>
-      <div style={{ display: 'flex', gap: 8 }}>
+      <div className="askai-row">
         <input
           className="input"
+          aria-label="Your question"
           placeholder={`e.g. What happened in ${region} today?`}
           value={question}
           onChange={e => setQuestion(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && ask()}
         />
-        <button className="btn btn-primary" onClick={ask} disabled={loading || !question.trim()}>
+        <button className="btn btn-primary" onClick={ask} disabled={loading || !question.trim()} aria-label="Ask">
           {loading ? <div className="spinner" /> : <Send size={15} />}
         </button>
       </div>
 
       {answer && (
-        <div style={{
-          marginTop: 12, background: 'var(--bg3)', border: '1px solid var(--green-dark)',
-          borderRadius: 'var(--radius)', padding: '12px 16px',
-        }}>
-          <div style={{ fontSize: 11, color: 'var(--green)', fontWeight: 600, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            AI Answer
-          </div>
-          <p style={{ fontSize: 14, lineHeight: 1.65 }}>{answer}</p>
+        <div className="askai-answer" aria-live="polite">
+          <div className="ans-label">AI Answer</div>
+          <p>{answer}</p>
         </div>
       )}
-    </div>
+    </section>
   );
 }

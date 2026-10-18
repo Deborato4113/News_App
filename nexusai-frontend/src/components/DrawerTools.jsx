@@ -1,37 +1,90 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Volume2, Square, Share2, FolderPlus, Check, StickyNote, Plus, Languages, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useSpeech from '../hooks/useSpeech';
 import useLibrary from '../hooks/useLibrary';
 import api from '../api/axios';
-import { LANGUAGES } from '../lib/languages';
+import { LANGUAGES, browserLanguage, filterLanguages } from '../lib/languages';
 
-// Translate the summary into another language. `value` is { lang, tag, text } or null.
-export function TranslateMenu({ article, value, onChange }) {
+// The last language the reader picked, so it is one click next time.
+const LAST_KEY = 'nexusai-lang';
+function lastLanguage() {
+  try { return LANGUAGES.find((l) => l.name === localStorage.getItem(LAST_KEY)) || null; } catch { return null; }
+}
+function rememberLanguage(name) {
+  try { localStorage.setItem(LAST_KEY, name); } catch { /* storage unavailable: fine */ }
+}
+
+// Translate the summary into any of the supported languages. `value` is
+// { lang, native, tag, cloud, rtl, text } or null.
+export function TranslateMenu({ article, value, onChange, variant = 'drawer' }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [query, setQuery] = useState('');
+  const box = useRef(null);
+  const searchRef = useRef(null);
+
+  // Close on Escape or a click outside.
+  useEffect(() => {
+    if (!open) return undefined;
+    searchRef.current?.focus(); // the search box is the reason the menu was opened
+    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
+    const onDown = (e) => { if (box.current && !box.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('mousedown', onDown);
+    return () => { document.removeEventListener('keydown', onKey); document.removeEventListener('mousedown', onDown); };
+  }, [open]);
 
   async function pick(l) {
     setOpen(false);
+    setQuery('');
     setBusy(true);
     try {
       const r = await api.post('/ai/translate', { text: article.summary || article.description || article.title, targetLang: l.name });
-      onChange({ lang: l.name, tag: l.tag, cloud: l.cloud, text: r.data.translated });
+      rememberLanguage(l.name);
+      onChange({ lang: l.name, native: l.native, tag: l.tag, cloud: l.cloud, rtl: !!l.rtl, text: r.data.translated });
     } catch (err) {
       toast.error(err.response?.data?.message || 'Translation failed.');
     }
     setBusy(false);
   }
 
+  // Suggestions first: the reader's browser language and their last pick.
+  const matches = filterLanguages(query);
+  const suggested = query ? [] : [browserLanguage(), lastLanguage()].filter((l, i, a) => l && a.findIndex((x) => x?.name === l.name) === i);
+  const rest = matches.filter((l) => !suggested.some((s) => s.name === l.name));
+
+  const item = (l) => (
+    <button key={l.name} type="button" className="menu-item lang-item" onClick={() => pick(l)}>
+      <span>{l.name}</span>
+      <span className="lang-native" lang={l.tag} dir={l.rtl ? 'rtl' : undefined}>{l.native}</span>
+    </button>
+  );
+
   return (
-    <div className="collect">
-      <button type="button" className={`btn btn-ghost btn-sm${value ? ' on' : ''}`} aria-expanded={open} disabled={busy} onClick={() => setOpen((o) => !o)}>
+    <div className="collect" ref={box}>
+      <button type="button" className={variant === 'card' ? `act${value ? ' on-green' : ''}` : `btn btn-ghost btn-sm${value ? ' on' : ''}`} aria-expanded={open} aria-haspopup="listbox" disabled={busy} onClick={() => setOpen((o) => !o)}>
         {busy ? <Loader2 size={14} className="spin" /> : <Languages size={14} />} {value ? value.lang : 'Translate'}
       </button>
       {open && (
-        <div className="collect-pop" style={{ width: 170 }}>
-          {value && <button type="button" className="menu-item" onClick={() => { onChange(null); setOpen(false); }}>Show original</button>}
-          {LANGUAGES.map((l) => <button key={l.name} type="button" className="menu-item" onClick={() => pick(l)}>{l.name}</button>)}
+        <div className={`collect-pop lang-pop${variant === 'card' ? ' lang-pop-up' : ''}`}>
+          <input
+            className="lang-search"
+            type="search"
+            placeholder="Search 70+ languages"
+            aria-label="Search languages"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            ref={searchRef}
+          />
+          <div className="lang-list" role="listbox" aria-label="Languages">
+            {value && !query && <button type="button" className="menu-item" onClick={() => { onChange(null); setOpen(false); }}>Show original (English)</button>}
+            {suggested.length > 0 && <p className="menu-head">Suggested</p>}
+            {suggested.map(item)}
+            {suggested.length > 0 && rest.length > 0 && <p className="menu-head">All languages</p>}
+            {rest.map(item)}
+            {matches.length === 0 && <p className="menu-head">No language matches “{query}”.</p>}
+          </div>
         </div>
       )}
     </div>
@@ -40,7 +93,7 @@ export function TranslateMenu({ article, value, onChange }) {
 
 // Listen + Share buttons for the reader drawer. When a translation is showing,
 // Listen reads that translation in its own language.
-export function ListenShare({ article, translated }) {
+export function ListenShare({ article, translated, showShare = true }) {
   const { speaking, stop, hasVoice, speakBrowser, speakServer } = useSpeech();
   const { title, summary, description, url } = article;
 
@@ -50,11 +103,14 @@ export function ListenShare({ article, translated }) {
       speakBrowser(`${title}. ${summary || description || ''}`);
       return;
     }
-    // Translations use the server voice so they work on any device; if it is
-    // unavailable, fall back to a voice installed on this device.
-    if (await speakServer(translated.text, translated.cloud)) return;
+    // Translations use the server voice so they work on any device; if Google has
+    // no voice for the language or the server voice is unavailable, fall back to a
+    // voice installed on this device.
+    if (translated.cloud && await speakServer(translated.text, translated.cloud)) return;
     if (hasVoice(translated.tag) && speakBrowser(translated.text, translated.tag)) return;
-    toast.error(`Could not play ${translated.lang} audio right now. Please try again in a moment.`);
+    toast.error(translated.cloud
+      ? `Could not play ${translated.lang} audio right now. Please try again in a moment.`
+      : `Audio is not available for ${translated.lang} on this device yet. You can still read the translation.`);
   }
 
   async function share() {
@@ -76,9 +132,11 @@ export function ListenShare({ article, translated }) {
       <button type="button" className={`btn btn-ghost btn-sm${speaking ? ' on' : ''}`} aria-pressed={speaking} onClick={listen}>
         {speaking ? <Square size={13} /> : <Volume2 size={14} />} {speaking ? 'Stop' : 'Listen'}
       </button>
-      <button type="button" className="btn btn-ghost btn-sm" onClick={share}>
-        <Share2 size={14} /> Share
-      </button>
+      {showShare && (
+        <button type="button" className="btn btn-ghost btn-sm" onClick={share}>
+          <Share2 size={14} /> Share
+        </button>
+      )}
     </div>
   );
 }

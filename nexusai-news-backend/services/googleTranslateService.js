@@ -4,12 +4,8 @@
 // falls back to the Groq model.
 const ENDPOINT = 'https://translation.googleapis.com/language/translate/v2';
 
-// The app's language names -> Google's language codes.
-const CODES = {
-  Hindi: 'hi', Bengali: 'bn', Tamil: 'ta', Telugu: 'te', Marathi: 'mr', Gujarati: 'gu',
-  Kannada: 'kn', Malayalam: 'ml', Punjabi: 'pa', Urdu: 'ur', Spanish: 'es', French: 'fr',
-  German: 'de', Arabic: 'ar', Chinese: 'zh-CN', Japanese: 'ja', Russian: 'ru', Portuguese: 'pt',
-};
+// The app's language names -> Google's language codes (see config/languages.js).
+const { CODES } = require('../config/languages');
 
 class TranslateNotConfiguredError extends Error {
   constructor() {

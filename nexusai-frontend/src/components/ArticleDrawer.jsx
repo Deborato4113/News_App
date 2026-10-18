@@ -18,7 +18,7 @@ function when(d) {
 // J/K or the arrow keys to move between the articles of the list it came from.
 export default function ArticleDrawer({ article, position, total, onPrev, onNext, onClose }) {
   const closeRef = useRef(null);
-  const [translated, setTranslated] = useState(null); // { lang, tag, text }
+  const [translated, setTranslated] = useState(null); // { lang, native, tag, cloud, rtl, text }
 
   useEffect(() => {
     const returnTo = document.activeElement;
@@ -80,8 +80,8 @@ export default function ArticleDrawer({ article, position, total, onPrev, onNext
 
           {translated && (
             <div className="translated">
-              <p className="meta" style={{ marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{translated.lang}</p>
-              <p className="drawer-text" lang={translated.tag}>{translated.text}</p>
+              <p className="meta" style={{ marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{translated.lang} · <span lang={translated.tag}>{translated.native}</span></p>
+              <p className="drawer-text" lang={translated.tag} dir={translated.rtl ? 'rtl' : undefined}>{translated.text}</p>
             </div>
           )}
           <p className="drawer-text" style={translated ? { marginTop: 14, opacity: 0.75 } : undefined}>{summary || description || 'No summary available.'}</p>

@@ -8,7 +8,7 @@ vi.mock('react-hot-toast', () => ({ default: Object.assign(vi.fn(), { error: vi.
 import toast from 'react-hot-toast';
 import api from '../api/axios';
 import { LibraryContext } from '../context/libraryContext';
-import { ListenShare, CollectionPicker, NoteBox } from '../components/DrawerTools';
+import { TranslateMenu, ListenShare, CollectionPicker, NoteBox } from '../components/DrawerTools';
 import MoodPanel from '../components/MoodPanel';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -147,5 +147,56 @@ describe('MoodPanel', () => {
   it('stays hidden with too few stories', () => {
     const { container } = render(<MemoryRouter><MoodPanel articles={[mk('One', 'pos')]} region="X" /></MemoryRouter>);
     expect(container.firstChild).toBeNull();
+  });
+});
+
+describe('TranslateMenu', () => {
+  it('searches the language list and translates into the chosen language', async () => {
+    api.post.mockResolvedValue({ data: { translated: 'Habari' } });
+    const onChange = vi.fn();
+    const user = userEvent.setup();
+    render(<TranslateMenu article={article} value={null} onChange={onChange} />);
+    await user.click(screen.getByRole('button', { name: /translate/i }));
+    await user.type(screen.getByRole('searchbox', { name: /search languages/i }), 'swah');
+    expect(screen.queryByText('Hindi')).toBeNull();
+    await user.click(screen.getByRole('button', { name: /swahili/i }));
+    expect(api.post).toHaveBeenCalledWith('/ai/translate', expect.objectContaining({ targetLang: 'Swahili' }));
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ lang: 'Swahili', cloud: null, text: 'Habari' }));
+  });
+
+  it('says when nothing matches and closes on Escape', async () => {
+    const user = userEvent.setup();
+    render(<TranslateMenu article={article} value={null} onChange={() => {}} />);
+    await user.click(screen.getByRole('button', { name: /translate/i }));
+    await user.type(screen.getByRole('searchbox', { name: /search languages/i }), 'klingon');
+    expect(screen.getByText(/no language matches/i)).toBeTruthy();
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('searchbox')).toBeNull();
+  });
+});
+
+describe('Listen in a language without a server voice', () => {
+  it('skips the server and uses a device voice', async () => {
+    Object.defineProperty(window, 'speechSynthesis', {
+      value: { speak: vi.fn(), cancel: vi.fn(), getVoices: () => [{ lang: 'sw-KE' }] }, configurable: true,
+    });
+    window.SpeechSynthesisUtterance = function (t) { this.text = t; };
+    api.post.mockClear();
+    const user = userEvent.setup();
+    render(<ListenShare article={article} translated={{ lang: 'Swahili', tag: 'sw', cloud: null, text: 'Habari' }} />);
+    await user.click(screen.getByRole('button', { name: /listen/i }));
+    expect(api.post).not.toHaveBeenCalled();
+    expect(window.speechSynthesis.speak.mock.calls[0][0].lang).toBe('sw');
+  });
+
+  it('explains when the device has no voice either', async () => {
+    Object.defineProperty(window, 'speechSynthesis', {
+      value: { speak: vi.fn(), cancel: vi.fn(), getVoices: () => [{ lang: 'en-US' }] }, configurable: true,
+    });
+    const user = userEvent.setup();
+    render(<ListenShare article={article} translated={{ lang: 'Amharic', tag: 'am', cloud: null, text: 'ሰላም' }} />);
+    await user.click(screen.getByRole('button', { name: /listen/i }));
+    expect(window.speechSynthesis.speak).not.toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('Amharic'));
   });
 });

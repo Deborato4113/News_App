@@ -1,18 +1,17 @@
 import { useState } from 'react';
-import { ExternalLink, ShieldAlert, Heart, Bookmark, MessageCircle, Languages, Loader2, PanelRightOpen } from 'lucide-react';
+import { ExternalLink, ShieldAlert, Heart, Bookmark, MessageCircle, PanelRightOpen } from 'lucide-react';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
 import CommentSection from './CommentSection';
 import useReader from '../hooks/useReader';
 import useLibrary from '../hooks/useLibrary';
+import { TranslateMenu, ListenShare } from './DrawerTools';
 
 const BADGE = {
   Politics: 'badge-politics', Business: 'badge-business',
   Technology: 'badge-tech', Sports: 'badge-sports',
   Weather: 'badge-weather', Health: 'badge-health', General: 'badge-general',
 };
-
-const LANGUAGES = ['Hindi', 'Bengali', 'Tamil', 'Telugu', 'Marathi', 'Spanish', 'French', 'Arabic'];
 
 function timeAgo(dateStr) {
   const diff = Math.floor((Date.now() - new Date(dateStr)) / 60000);
@@ -46,9 +45,7 @@ export default function ArticleCard({ article, featured, onSaveChange, index = 0
   const [savePop, setSavePop] = useState(0);
   const [showComments, setShowComments] = useState(false);
 
-  const [showLangMenu, setShowLangMenu] = useState(false);
-  const [translating, setTranslating]   = useState(false);
-  const [translated, setTranslated]     = useState(null); // { lang, text }
+  const [translated, setTranslated] = useState(null); // { lang, native, tag, cloud, rtl, text }
 
   async function toggleLike() {
     if (!_id || liking) return;
@@ -89,18 +86,6 @@ export default function ArticleCard({ article, featured, onSaveChange, index = 0
       toast.error('Could not update saved articles.');
     }
     setSaving(false);
-  }
-
-  async function translate(lang) {
-    setShowLangMenu(false);
-    setTranslating(true);
-    try {
-      const r = await api.post('/ai/translate', { text: summary || description || title, targetLang: lang });
-      setTranslated({ lang, text: r.data.translated });
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Translation failed.');
-    }
-    setTranslating(false);
   }
 
   return (
@@ -144,17 +129,13 @@ export default function ArticleCard({ article, featured, onSaveChange, index = 0
       )}
 
       {/* Translation */}
-      {translating && (
-        <p style={{ fontSize: 12, color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: 6 }}>
-          <Loader2 size={12} className="spin" /> Translating…
-        </p>
-      )}
       {translated && (
         <div style={{ background: 'var(--bg3)', borderRadius: 6, padding: '8px 10px' }}>
           <p style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-            {translated.lang}
+            {translated.lang} · <span lang={translated.tag}>{translated.native}</span>
           </p>
-          <p style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.6 }}>{translated.text}</p>
+          <p lang={translated.tag} dir={translated.rtl ? 'rtl' : undefined} style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.6 }}>{translated.text}</p>
+          <div style={{ marginTop: 8 }}><ListenShare article={article} translated={translated} showShare={false} /></div>
         </div>
       )}
 
@@ -181,18 +162,7 @@ export default function ArticleCard({ article, featured, onSaveChange, index = 0
             <MessageCircle size={14} /> Comments
           </button>
 
-          <div style={{ position: 'relative' }}>
-            <button className="act" onClick={() => setShowLangMenu(s => !s)} aria-expanded={showLangMenu}>
-              <Languages size={14} /> Translate
-            </button>
-            {showLangMenu && (
-              <div className="menu" style={{ bottom: '120%', right: 0, minWidth: 130 }}>
-                {LANGUAGES.map(l => (
-                  <button key={l} className="menu-item" onClick={() => translate(l)}>{l}</button>
-                ))}
-              </div>
-            )}
-          </div>
+          <TranslateMenu variant="card" article={article} value={translated} onChange={setTranslated} />
 
           {url && (
             <a href={url} target="_blank" rel="noopener noreferrer" className="act" style={{ color: 'var(--green)' }}>

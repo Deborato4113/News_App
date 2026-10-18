@@ -168,6 +168,8 @@ input, textarea { font-family: inherit; }
   .nav-sep { width: auto; height: 1px; margin: 6px 0; }
   .nav-user { padding: 8px 12px; }
   .nav-links .btn { justify-content: center; padding: 11px 12px; font-size: 15px; margin-top: 4px; }
+  /* In the mobile menu the theme toggle is a full-width row with its label, like the other links. */
+  .nav-links .theme-btn { width: 100%; height: auto; padding: 11px 12px; justify-content: flex-start; gap: 12px; text-align: left; }
 }
 
 /* ── Footer ──────────────────────────────────────────── */

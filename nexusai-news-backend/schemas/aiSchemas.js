@@ -27,4 +27,14 @@ const translateSchema = z.object({
   }),
 });
 
-module.exports = { askSchema, quizSchema, summarizeSchema, translateSchema, SUPPORTED_LANGUAGES };
+// Language tags Google Cloud Text-to-Speech understands for the languages the reader offers.
+const SPEECH_LANGS = ['en-IN', 'hi-IN', 'bn-IN', 'ta-IN', 'te-IN', 'mr-IN', 'es-ES', 'fr-FR', 'ar-XA'];
+
+const speakSchema = z.object({
+  text: z.string().trim().min(2, 'text must be at least 2 characters').max(1500, 'text is limited to 1500 characters'),
+  lang: z.enum(SPEECH_LANGS, {
+    errorMap: () => ({ message: `lang must be one of: ${SPEECH_LANGS.join(', ')}` }),
+  }),
+});
+
+module.exports = { speakSchema, SPEECH_LANGS, askSchema, quizSchema, summarizeSchema, translateSchema, SUPPORTED_LANGUAGES };

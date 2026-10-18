@@ -6,6 +6,7 @@ const { addCommentSchema } = require('../schemas/commentSchemas');
 const {
   getNews, refreshNews, getArticleById, toggleLike,
   searchArticles, getTrending, getSavedArticles, toggleSave,
+  markRead, getReadIds, getHistory,
 } = require('../controllers/newsController');
 const { getComments, addComment, deleteComment } = require('../controllers/commentController');
 
@@ -18,6 +19,8 @@ router.post('/refresh', auth, validate(refreshNewsSchema), refreshNews);
 router.get('/search',   auth, searchArticles);
 router.get('/trending', auth, getTrending);
 router.get('/saved',    auth, getSavedArticles);
+router.get('/read-ids', auth, getReadIds);
+router.get('/history',  auth, getHistory);
 
 // Comments (article-scoped)
 router.get('/:id/comments',  auth, getComments);
@@ -27,6 +30,7 @@ router.delete('/comments/:commentId', auth, deleteComment);
 // Likes & saves
 router.post('/:id/like', auth, toggleLike);
 router.post('/:id/save', auth, toggleSave);
+router.post('/:id/read', auth, markRead);
 
 router.get('/:id', auth, getArticleById);
 

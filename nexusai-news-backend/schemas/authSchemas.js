@@ -36,7 +36,30 @@ const followRegionSchema = z.object({
   region: z.string().trim().min(2).max(60),
 });
 
+const updateMeSchema = z.object({
+  name: z.string().trim().min(2, 'Name must be at least 2 characters').max(80).optional(),
+  defaultRegion: z.string().trim().toLowerCase().max(60).optional(),
+  interests: z.array(z.string().trim().min(2).max(40)).max(8).optional(),
+  onboarded: z.boolean().optional(),
+}).refine((v) => Object.keys(v).length > 0, { message: 'Nothing to update' });
+
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, 'Current password is required'),
+  newPassword: passwordRule,
+}).refine((v) => v.currentPassword !== v.newPassword, {
+  message: 'Choose a different password from your current one',
+  path: ['newPassword'],
+});
+
+const deleteAccountSchema = z.object({
+  confirmEmail: z.string().trim().toLowerCase().email(),
+  password: z.string().optional(),
+});
+
 module.exports = {
+  updateMeSchema,
+  changePasswordSchema,
+  deleteAccountSchema,
   signupSchema,
   loginSchema,
   googleAuthSchema,

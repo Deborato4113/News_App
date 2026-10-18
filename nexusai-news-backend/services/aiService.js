@@ -124,7 +124,8 @@ ${headlines}`;
 // languages nobody asks for.
 async function translateText(text, targetLang) {
   const prompt = `Translate the following news text into ${targetLang}. ` +
-    `Keep names, places and numbers accurate. Return ONLY the translated text, nothing else.
+    `Keep names, places and numbers accurate. Translate only what is written: never add, complete or guess missing words, dates or numbers. ` +
+    `If the text ends mid-sentence or with "...", end your translation the same way, cut off at the same point. Return ONLY the translated text, nothing else.
 
 Text:
 ${text}`;

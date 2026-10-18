@@ -65,10 +65,10 @@ export default function Navbar() {
                 <span className="lbl">{theme === 'light' ? 'Dark theme' : 'Light theme'}</span>
               </button>
               <div className="nav-sep" />
-              <span className="nav-user">
+              <Link to="/settings" className="nav-user" onClick={close} title="Settings" aria-label="Settings">
                 <span className="avatar" aria-hidden="true">{(user.name || '?').trim().charAt(0).toUpperCase()}</span>
                 {(user.name || '').split(' ')[0]}
-              </span>
+              </Link>
               <button className="nav-link" onClick={handleLogout} title="Log out"><LogOut size={15} aria-hidden="true" /> <span className="lbl">Log out</span></button>
             </>
           ) : (
@@ -79,6 +79,7 @@ export default function Navbar() {
                 {theme === 'light' ? <Moon size={15} aria-hidden="true" /> : <Sun size={15} aria-hidden="true" />}
                 <span className="lbl">{theme === 'light' ? 'Dark theme' : 'Light theme'}</span>
               </button>
+              <Link to="/about" className="nav-link" onClick={close}>How it’s built</Link>
               <Link to="/login" className="nav-link" onClick={close}>Log in</Link>
               <Link to="/signup" className="btn btn-primary btn-sm" onClick={close}>Get started</Link>
             </>

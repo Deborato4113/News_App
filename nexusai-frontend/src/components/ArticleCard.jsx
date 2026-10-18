@@ -4,6 +4,7 @@ import api from '../api/axios';
 import toast from 'react-hot-toast';
 import CommentSection from './CommentSection';
 import useReader from '../hooks/useReader';
+import useLibrary from '../hooks/useLibrary';
 
 const BADGE = {
   Politics: 'badge-politics', Business: 'badge-business',
@@ -22,6 +23,7 @@ function timeAgo(dateStr) {
 
 export default function ArticleCard({ article, featured, onSaveChange, index = 0, siblings }) {
   const reader = useReader();
+  const { readIds } = useLibrary();
   const {
     _id, title, summary, description, source, publishedAt, category, sentiment, url,
     biasLevel, factCheckNote,
@@ -102,7 +104,7 @@ export default function ArticleCard({ article, featured, onSaveChange, index = 0
   }
 
   return (
-    <div className={`card article${featured ? ' card-featured' : ''}`}
+    <div className={`card article${featured ? ' card-featured' : ''}${_id && readIds.has(_id) ? ' is-read' : ''}`}
       style={{ display: 'flex', flexDirection: 'column', gap: 8, '--i': index }}>
 
       {/* Meta row */}

@@ -6,6 +6,8 @@ import AskAI from '../components/AskAI';
 import HeadlineTicker from '../components/HeadlineTicker';
 import ArticleSkeleton from '../components/ArticleSkeleton';
 import EmptyState from '../components/EmptyState';
+import MoodPanel from '../components/MoodPanel';
+import { titleCase } from '../lib/text';
 import useCountUp from '../hooks/useCountUp';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -27,8 +29,10 @@ const CATS = ['All', 'Politics', 'Business', 'Technology', 'Sports', 'Weather', 
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const [region,   setRegion]   = useState('Mumbai');
-  const [input,    setInput]    = useState('Mumbai');
+  // Start on the city chosen in Settings or onboarding, else Mumbai.
+  const [startCity] = useState(() => titleCase(user?.defaultRegion || '') || 'Mumbai');
+  const [region,   setRegion]   = useState(startCity);
+  const [input,    setInput]    = useState(startCity);
   const [cat,      setCat]      = useState('All');
   const [articles, setArticles] = useState([]);
   const [loading,  setLoading]  = useState(false);
@@ -48,7 +52,7 @@ export default function Dashboard() {
   // Load the default city once on mount. fetchNews is recreated every render
   // and reads current state, so listing it as a dependency would refetch forever.
   useEffect(() => {
-    fetchNews(false, 'Mumbai');
+    fetchNews(false, startCity);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -110,6 +114,9 @@ export default function Dashboard() {
     .sort((a, b) => sort === 'top'
       ? (b.likeCount || 0) - (a.likeCount || 0)
       : new Date(b.publishedAt) - new Date(a.publishedAt));
+  // The reader's chosen topics come first (right after "All").
+  const mine = user?.interests || [];
+  const orderedCats = [CATS[0], ...CATS.slice(1).sort((a, b) => Number(mine.includes(b)) - Number(mine.includes(a)))];
   const pos  = articles.filter(a => a.sentiment === 'pos').length;
   const neg  = articles.filter(a => a.sentiment === 'neg').length;
   const srcs = new Set(articles.map(a => a.source?.name).filter(Boolean)).size;
@@ -221,10 +228,13 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* Mood and trending words */}
+      {articles.length > 0 && !loading && <MoodPanel articles={articles} region={region} />}
+
       {/* Category filter */}
       {articles.length > 0 && !loading && (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: '1.25rem' }} role="group" aria-label="Category">
-          {CATS.map(c => {
+          {orderedCats.map(c => {
             const n = c === 'All' ? articles.length : articles.filter(a => a.category === c).length;
             if (c !== 'All' && n === 0) return null;
             return (

@@ -10,6 +10,7 @@ import CommandPalette from './components/CommandPalette';
 import Shortcuts from './components/Shortcuts';
 import ServerStatus from './components/ServerStatus';
 import ReaderProvider from './components/ReaderProvider';
+import LibraryProvider from './components/LibraryProvider';
 import Landing from './pages/Landing';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
@@ -23,6 +24,10 @@ const SearchPage = lazy(() => import('./pages/SearchPage'));
 const MyFeed = lazy(() => import('./pages/MyFeed'));
 const AskNexus = lazy(() => import('./pages/AskNexus'));
 const NotFound = lazy(() => import('./pages/NotFound'));
+const Settings = lazy(() => import('./pages/Settings'));
+const Onboarding = lazy(() => import('./pages/Onboarding'));
+const History = lazy(() => import('./pages/History'));
+const About = lazy(() => import('./pages/About'));
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -44,17 +49,32 @@ function Home() {
   return user ? <Dashboard /> : <Landing />;
 }
 
-const TITLES = {
-  '/': 'News', '/ask': 'Ask AI', '/quiz': 'Quiz', '/feed': 'My feed', '/saved': 'Saved articles',
-  '/search': 'Search', '/admin': 'Admin', '/forgot-password': 'Reset password', '/login': 'Log in', '/signup': 'Sign up',
+const DEFAULT_DESC = 'NexusAI delivers AI-summarized regional current affairs, quizzes, and a news Q&A assistant tailored to your city.';
+const PAGES = {
+  '/': ['News', 'Regional news from any city, summarised and checked by AI.'],
+  '/ask': ['Ask AI', 'Ask a question and get an answer with numbered sources from real articles.'],
+  '/quiz': ['Quiz', 'Practice current affairs with quizzes generated from today’s news.'],
+  '/feed': ['My feed', 'News from the cities you follow, in one place.'],
+  '/saved': ['Saved articles', 'Your reading list and collections.'],
+  '/history': ['Reading history', 'Stories you have opened recently.'],
+  '/search': ['Search', 'Search every article that has been fetched, in any region.'],
+  '/settings': ['Settings', 'Your profile, reading preferences and account.'],
+  '/welcome': ['Welcome', 'Choose your cities and topics.'],
+  '/about': ['How it’s built', 'The architecture, the AI agent loop and the measured results behind NexusAI.'],
+  '/admin': ['Admin', 'Moderation and usage.'],
+  '/forgot-password': ['Reset password', DEFAULT_DESC],
+  '/login': ['Log in', DEFAULT_DESC],
+  '/signup': ['Sign up', DEFAULT_DESC],
 };
 
-// On every page change: back to the top and a page-specific tab title.
+// On every page change: back to the top, plus a page-specific tab title and description.
 function RouteEffects() {
   const { pathname } = useLocation();
   useEffect(() => {
     window.scrollTo(0, 0);
-    document.title = TITLES[pathname] ? `${TITLES[pathname]} · NexusAI` : 'NexusAI — Regional Current Affairs';
+    const [title, desc] = PAGES[pathname] || [];
+    document.title = title ? `${title} · NexusAI` : 'NexusAI — Regional Current Affairs';
+    document.querySelector('meta[name="description"]')?.setAttribute('content', desc || DEFAULT_DESC);
   }, [pathname]);
   return null;
 }
@@ -78,6 +98,10 @@ function AppRoutes() {
         <Route path="/search"          element={<ProtectedRoute><SearchPage /></ProtectedRoute>} />
         <Route path="/feed"            element={<ProtectedRoute><MyFeed /></ProtectedRoute>} />
         <Route path="/ask"             element={<ProtectedRoute><AskNexus /></ProtectedRoute>} />
+        <Route path="/settings"        element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+        <Route path="/history"         element={<ProtectedRoute><History /></ProtectedRoute>} />
+        <Route path="/welcome"         element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+        <Route path="/about"           element={<About />} />
         <Route path="/admin"           element={<AdminRoute><AdminDashboard /></AdminRoute>} />
         <Route path="/login"           element={<Login />} />
         <Route path="/signup"          element={<Signup />} />
@@ -98,9 +122,11 @@ export default function App() {
       <AuthProvider>
         <BrowserRouter>
           <Toaster position="top-right" toastOptions={{ duration: 3000, className: 'toast-card' }} />
-          <ReaderProvider>
-            <AppRoutes />
-          </ReaderProvider>
+          <LibraryProvider>
+            <ReaderProvider>
+              <AppRoutes />
+            </ReaderProvider>
+          </LibraryProvider>
         </BrowserRouter>
       </AuthProvider>
     </ErrorBoundary>

@@ -109,3 +109,58 @@ describe('GET /api/auth/me', () => {
     expect(res.body.user.email).toBe(validUser.email);
   });
 });
+
+describe('account settings', () => {
+  const user = { name: 'Settings User', email: 'settings@example.com', password: 'Passw0rdA' };
+  let token;
+
+  beforeEach(async () => {
+    const res = await request(app).post('/api/auth/signup').send(user);
+    token = res.body.token;
+  });
+
+  it('PATCH /me updates profile fields and returns them', async () => {
+    const res = await request(app).patch('/api/auth/me')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'New Name', defaultRegion: 'Kolkata', interests: ['Technology'], onboarded: true });
+    expect(res.status).toBe(200);
+    expect(res.body.user).toMatchObject({ name: 'New Name', defaultRegion: 'kolkata', interests: ['Technology'], onboarded: true });
+  });
+
+  it('PATCH /me cannot escalate role', async () => {
+    const res = await request(app).patch('/api/auth/me')
+      .set('Authorization', `Bearer ${token}`).send({ name: 'Still User', role: 'admin' });
+    expect(res.status).toBe(200);
+    expect(res.body.user.role).toBe('user');
+  });
+
+  it('change-password rejects a wrong current password and accepts the right one', async () => {
+    const bad = await request(app).post('/api/auth/change-password')
+      .set('Authorization', `Bearer ${token}`).send({ currentPassword: 'Wrong1234', newPassword: 'NewPass123' });
+    expect(bad.status).toBe(401);
+
+    const ok = await request(app).post('/api/auth/change-password')
+      .set('Authorization', `Bearer ${token}`).send({ currentPassword: user.password, newPassword: 'NewPass123' });
+    expect(ok.status).toBe(200);
+
+    const login = await request(app).post('/api/auth/login').send({ email: user.email, password: 'NewPass123' });
+    expect(login.status).toBe(200);
+  });
+
+  it('DELETE /me needs the right email and password, then removes the account', async () => {
+    const wrongEmail = await request(app).delete('/api/auth/me')
+      .set('Authorization', `Bearer ${token}`).send({ confirmEmail: 'other@example.com', password: user.password });
+    expect(wrongEmail.status).toBe(400);
+
+    const wrongPw = await request(app).delete('/api/auth/me')
+      .set('Authorization', `Bearer ${token}`).send({ confirmEmail: user.email, password: 'Wrong1234' });
+    expect(wrongPw.status).toBe(401);
+
+    const ok = await request(app).delete('/api/auth/me')
+      .set('Authorization', `Bearer ${token}`).send({ confirmEmail: user.email, password: user.password });
+    expect(ok.status).toBe(200);
+
+    const me = await request(app).get('/api/auth/me').set('Authorization', `Bearer ${token}`);
+    expect(me.status).toBe(404);
+  });
+});

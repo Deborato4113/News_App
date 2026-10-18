@@ -33,7 +33,7 @@ export default function Signup() {
     try {
       await signup(form.name, form.email, form.password);
       toast.success('Account created! Welcome 🎉');
-      navigate('/');
+      navigate('/welcome');
     } catch (err) {
       setError(err.response?.data?.message || 'Sign up failed. Try again.');
     }

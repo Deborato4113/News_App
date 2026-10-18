@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Newspaper, Bot, BrainCircuit, Star, Bookmark, Search, ShieldCheck, CornerDownLeft } from 'lucide-react';
+import { Newspaper, Bot, BrainCircuit, Star, Bookmark, Search, ShieldCheck, CornerDownLeft, History, Settings, Info } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const PAGES = [
@@ -10,6 +10,9 @@ const PAGES = [
   { to: '/feed', label: 'Go to My feed', icon: Star, words: 'feed following regions' },
   { to: '/saved', label: 'Go to Saved articles', icon: Bookmark, words: 'saved bookmarks' },
   { to: '/search', label: 'Go to Search', icon: Search, words: 'search find' },
+  { to: '/history', label: 'Go to Reading history', icon: History, words: 'history read recently' },
+  { to: '/settings', label: 'Go to Settings', icon: Settings, words: 'settings profile password account install' },
+  { to: '/about', label: 'How it’s built', icon: Info, words: 'about architecture agent stack' },
   { to: '/admin', label: 'Go to Admin', icon: ShieldCheck, words: 'admin', admin: true },
 ];
 

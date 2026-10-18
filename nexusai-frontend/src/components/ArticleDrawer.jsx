@@ -1,6 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { X, ChevronLeft, ChevronRight, ExternalLink, ShieldAlert } from 'lucide-react';
 import CommentSection from './CommentSection';
+import { ListenShare, CollectionPicker, NoteBox, TranslateMenu } from './DrawerTools';
+import { readSeconds, formatRead } from '../lib/text';
 
 const BADGE = {
   Politics: 'badge-politics', Business: 'badge-business', Technology: 'badge-tech',
@@ -16,6 +18,7 @@ function when(d) {
 // J/K or the arrow keys to move between the articles of the list it came from.
 export default function ArticleDrawer({ article, position, total, onPrev, onNext, onClose }) {
   const closeRef = useRef(null);
+  const [translated, setTranslated] = useState(null); // { lang, tag, text }
 
   useEffect(() => {
     const returnTo = document.activeElement;
@@ -65,9 +68,23 @@ export default function ArticleDrawer({ article, position, total, onPrev, onNext
           </div>
 
           <h2 className="drawer-title">{title}</h2>
-          <p className="meta" style={{ margin: '8px 0 16px' }}>{source?.name || 'Unknown source'}{when(publishedAt) && ` · ${when(publishedAt)}`}</p>
+          <p className="meta" style={{ margin: '8px 0 16px' }}>
+            {source?.name || 'Unknown source'}{when(publishedAt) && ` · ${when(publishedAt)}`} · {formatRead(readSeconds(summary || description || ''))}
+          </p>
 
-          <p className="drawer-text">{summary || description || 'No summary available.'}</p>
+          <div className="drawer-tools">
+            <ListenShare article={article} translated={translated} />
+            <TranslateMenu article={article} value={translated} onChange={setTranslated} />
+            {_id && <CollectionPicker articleId={_id} />}
+          </div>
+
+          {translated && (
+            <div className="translated">
+              <p className="meta" style={{ marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{translated.lang}</p>
+              <p className="drawer-text" lang={translated.tag}>{translated.text}</p>
+            </div>
+          )}
+          <p className="drawer-text" style={translated ? { marginTop: 14, opacity: 0.75 } : undefined}>{summary || description || 'No summary available.'}</p>
 
           {factCheckNote && (
             <p className="why" style={{ borderColor: 'var(--amber)', color: 'var(--amber)' }}>
@@ -80,6 +97,8 @@ export default function ArticleDrawer({ article, position, total, onPrev, onNext
               Read the full article <ExternalLink size={13} />
             </a>
           )}
+
+          {_id && <NoteBox key={_id} articleId={_id} />}
 
           <h3 className="card-title" style={{ marginTop: 26 }}>Discussion</h3>
           {_id ? <CommentSection articleId={_id} /> : <p className="meta">Comments are unavailable for this article.</p>}

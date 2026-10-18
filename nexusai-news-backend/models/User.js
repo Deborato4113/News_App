@@ -30,6 +30,11 @@ const userSchema = new mongoose.Schema({
 
   // ── Multi-region following ───────────────────────────────────
   followedRegions: { type: [String], default: [] },
+
+  // ── Preferences / onboarding ─────────────────────────────────
+  defaultRegion: { type: String, default: '', lowercase: true, trim: true },
+  interests:     { type: [String], default: [] },
+  onboarded:     { type: Boolean, default: false },
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', userSchema);

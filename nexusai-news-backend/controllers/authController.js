@@ -2,6 +2,13 @@ const jwt    = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const User   = require('../models/User');
+const Comment     = require('../models/Comment');
+const Article     = require('../models/Article');
+const QuizAttempt = require('../models/QuizAttempt');
+const AgentRun    = require('../models/AgentRun');
+const Reading     = require('../models/Reading');
+const Collection  = require('../models/Collection');
+const Note        = require('../models/Note');
 const logger = require('../utils/logger');
 const { verifyFirebaseToken } = require('../utils/firebaseAdmin');
 const { sendPasswordResetEmail } = require('../utils/mailer');
@@ -18,6 +25,9 @@ function publicUser(user) {
     role: user.role,
     authProvider: user.authProvider,
     followedRegions: user.followedRegions || [],
+    defaultRegion: user.defaultRegion || '',
+    interests: user.interests || [],
+    onboarded: !!user.onboarded,
   };
 }
 
@@ -190,5 +200,77 @@ exports.unfollowRegion = async (req, res, next) => {
     );
     if (!user) return res.status(404).json({ message: 'User not found' });
     res.json({ followedRegions: user.followedRegions });
+  } catch (err) { next(err); }
+};
+
+// ── PATCH /api/auth/me  { name?, defaultRegion?, interests?, onboarded? } ──
+exports.updateMe = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const { name, defaultRegion, interests, onboarded } = req.body; // validated by zod
+    if (name !== undefined) user.name = name;
+    if (defaultRegion !== undefined) user.defaultRegion = defaultRegion;
+    if (interests !== undefined) user.interests = interests;
+    if (onboarded !== undefined) user.onboarded = onboarded;
+    await user.save();
+
+    res.json({ user: publicUser(user) });
+  } catch (err) { next(err); }
+};
+
+// ── POST /api/auth/change-password  { currentPassword, newPassword } ──
+exports.changePassword = async (req, res, next) => {
+  try {
+    const { currentPassword, newPassword } = req.body; // validated by zod
+    const user = await User.findById(req.user.id).select('+password');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    if (!user.password) {
+      return res.status(400).json({ message: 'This account signs in with Google, so it has no password to change.' });
+    }
+    if (!(await bcrypt.compare(currentPassword, user.password))) {
+      return res.status(401).json({ message: 'Your current password is incorrect.' });
+    }
+
+    user.password = await bcrypt.hash(newPassword, 12);
+    await user.save();
+    res.json({ message: 'Password updated.' });
+  } catch (err) { next(err); }
+};
+
+// ── DELETE /api/auth/me  { confirmEmail, password? } ────────────
+// Removes the account and everything tied to it. The user must retype their
+// email, and local accounts must also give their password, so a stolen
+// token alone can't wipe an account.
+exports.deleteMe = async (req, res, next) => {
+  try {
+    const { confirmEmail, password } = req.body; // validated by zod
+    const user = await User.findById(req.user.id).select('+password');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    if (confirmEmail !== user.email) {
+      return res.status(400).json({ message: 'That email does not match your account.' });
+    }
+    if (user.password) {
+      if (!password || !(await bcrypt.compare(password, user.password))) {
+        return res.status(401).json({ message: 'Your password is incorrect.' });
+      }
+    }
+
+    const id = user._id;
+    await Promise.all([
+      Article.updateMany({}, { $pull: { likedBy: id, savedBy: id } }),
+      Comment.deleteMany({ user: id }),
+      QuizAttempt.deleteMany({ user: id }),
+      AgentRun.deleteMany({ user: id }),
+      Reading.deleteMany({ user: id }),
+      Collection.deleteMany({ user: id }),
+      Note.deleteMany({ user: id }),
+    ]);
+    await user.deleteOne();
+
+    res.json({ message: 'Your account and its data have been deleted.' });
   } catch (err) { next(err); }
 };

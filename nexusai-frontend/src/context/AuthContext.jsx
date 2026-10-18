@@ -47,6 +47,7 @@ export function AuthProvider({ children }) {
     const r = await api.post('/auth/signup', { name, email, password });
     localStorage.setItem('nexusai_token', r.data.token);
     setUser(r.data.user);
+    return r.data.user;
   }
 
   async function login(email, password) {
@@ -90,12 +91,30 @@ export function AuthProvider({ children }) {
     setUser((u) => (u ? { ...u, followedRegions: r.data.followedRegions } : u));
   }
 
+  async function updateProfile(fields) {
+    const r = await api.patch('/auth/me', fields);
+    setUser(r.data.user);
+    return r.data.user;
+  }
+
+  async function changePassword(currentPassword, newPassword) {
+    const r = await api.post('/auth/change-password', { currentPassword, newPassword });
+    return r.data.message;
+  }
+
+  async function deleteAccount(confirmEmail, password) {
+    await api.delete('/auth/me', { data: { confirmEmail, password } });
+    localStorage.removeItem('nexusai_token');
+    setUser(null);
+  }
+
   return (
     <AuthContext.Provider value={{
       user, loading, signup, login, logout,
       loginWithGoogle, firebaseEnabled,
       forgotPassword, resetPassword,
       followRegion, unfollowRegion,
+      updateProfile, changePassword, deleteAccount,
     }}>
       {children}
     </AuthContext.Provider>

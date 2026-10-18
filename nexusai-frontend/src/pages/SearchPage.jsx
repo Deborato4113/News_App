@@ -17,8 +17,11 @@ function saveRecent(list) {
   try { localStorage.setItem(KEY, JSON.stringify(list)); } catch { /* storage unavailable */ }
 }
 
+// Links like /search?q=monsoon (the trending chips on the dashboard) start a search on arrival.
+const initialQuery = () => new URLSearchParams(window.location.search).get('q')?.slice(0, 100) || '';
+
 export default function SearchPage() {
-  const [q, setQ]               = useState('');
+  const [q, setQ]               = useState(initialQuery);
   const [articles, setArticles] = useState([]);
   const [loading, setLoading]   = useState(false);
   const [searched, setSearched] = useState('');
@@ -36,6 +39,16 @@ export default function SearchPage() {
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  // Run the search from the link once, after the first paint.
+  useEffect(() => {
+    const first = initialQuery().trim();
+    if (!first) return undefined;
+    const t = setTimeout(() => run(first), 0);
+    return () => clearTimeout(t);
+    // run reads current state and is recreated every render; this must fire once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function run(term) {

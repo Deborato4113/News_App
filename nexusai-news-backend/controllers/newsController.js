@@ -1,4 +1,6 @@
+const mongoose = require('mongoose');
 const Article = require('../models/Article');
+const Reading = require('../models/Reading');
 const { fetchAndEnrichNews, saveArticles } = require('../services/newsService');
 
 // Shapes an Article doc for the API response: replaces the raw likedBy/
@@ -240,3 +242,60 @@ exports.toggleLike = async (req, res, next) => {
     next(err);
   }
 };
+
+// ── POST /api/news/:id/read ──────────────────────────────────────
+// Records that this user opened an article (idempotent — re-reading just
+// refreshes the timestamp).
+exports.markRead = async (req, res, next) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ message: 'Invalid article id' });
+    if (!(await Article.exists({ _id: req.params.id }))) {
+      return res.status(404).json({ message: 'Article not found' });
+    }
+    await Reading.updateOne(
+      { user: req.user.id, article: req.params.id },
+      { $set: { readAt: new Date() } },
+      { upsert: true }
+    );
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+};
+
+// ── GET /api/news/read-ids ───────────────────────────────────────
+// Ids of recently read articles, so cards can be dimmed without sending
+// a per-article flag on every news response.
+exports.getReadIds = async (req, res, next) => {
+  try {
+    const rows = await Reading.find({ user: req.user.id })
+      .sort({ readAt: -1 }).limit(500).select('article').lean();
+    res.json({ ids: rows.map((r) => String(r.article)) });
+  } catch (err) { next(err); }
+};
+
+// ── GET /api/news/history?page=&limit= ───────────────────────────
+exports.getHistory = async (req, res, next) => {
+  try {
+    const pageSize = Math.min(Math.max(Number(req.query.limit) || 20, 1), 50);
+    const pageNum  = Math.max(Number(req.query.page) || 1, 1);
+    const filter = { user: req.user.id };
+
+    const [rows, total] = await Promise.all([
+      Reading.find(filter).sort({ readAt: -1 }).skip((pageNum - 1) * pageSize).limit(pageSize)
+        .populate('article'),
+      Reading.countDocuments(filter),
+    ]);
+
+    res.json({
+      total,
+      page: pageNum,
+      pageSize,
+      totalPages: Math.ceil(total / pageSize),
+      // An article can be pruned (30-day TTL) while its reading row lives on.
+      articles: rows
+        .filter((r) => r.article)
+        .map((r) => ({ ...annotate(r.article, req.user.id), readAt: r.readAt })),
+    });
+  } catch (err) { next(err); }
+};
+
+exports.annotate = annotate;

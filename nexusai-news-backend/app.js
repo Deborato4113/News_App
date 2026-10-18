@@ -39,6 +39,7 @@ app.use('/api/ai',    require('./routes/ai'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/quiz',  require('./routes/quiz'));
 app.use('/api/agent', require('./routes/agent'));
+app.use('/api/library', require('./routes/library'));
 
 // Health check — verifies the DB connection is actually alive, not just
 // that the process is running.

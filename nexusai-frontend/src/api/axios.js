@@ -1,43 +1,27 @@
 import axios from 'axios';
 
-// Exported so code that can't use axios (the live event stream needs fetch)
-// talks to the same server.
-export const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const api = axios.create({
-  baseURL: API_BASE,
-  timeout: 15000,
+  baseURL,
+  // The free hosting plan puts the server to sleep when idle, and waking it can take
+  // close to a minute, so a short timeout made the first request after a pause (often
+  // sign-up or login) fail with "timeout exceeded".
+  timeout: 60000,
 });
 
-// Slow-request signal. Free hosting puts the server to sleep when idle, so the
-// first request can take a while; if any request is still pending after 4s the
-// UI shows a "waking up" notice, and hides it once nothing is slow any more.
-const SLOW_AFTER_MS = 4000;
-let slowCount = 0;
-const emitSlow = (on) => window.dispatchEvent(new CustomEvent('nexusai:slow', { detail: on }));
-
-function settle(config) {
-  const meta = config?.metadata;
-  if (!meta) return;
-  clearTimeout(meta.timer);
-  if (meta.slow) {
-    meta.slow = false;
-    slowCount = Math.max(0, slowCount - 1);
-    if (slowCount === 0) emitSlow(false);
-  }
+// Wake the server as soon as the site opens, so it is ready by the time someone has
+// filled in the sign-up or login form. Fire and forget: the answer does not matter.
+if (import.meta.env.PROD && typeof fetch === 'function') {
+  try {
+    fetch(baseURL.replace(/\/api\/?$/, '/'), { mode: 'no-cors', cache: 'no-store' }).catch(() => {});
+  } catch { /* nothing to do if the browser blocks it */ }
 }
 
 // Attach JWT token on every request if available
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('nexusai_token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
-  const meta = { slow: false };
-  meta.timer = setTimeout(() => {
-    meta.slow = true;
-    slowCount += 1;
-    if (slowCount === 1) emitSlow(true);
-  }, SLOW_AFTER_MS);
-  config.metadata = meta;
   return config;
 });
 
@@ -45,15 +29,18 @@ api.interceptors.request.use((config) => {
 // from anywhere in the app, not just on the initial /auth/me check.
 // AuthContext listens for this event and clears user state + redirects.
 api.interceptors.response.use(
-  (response) => {
-    settle(response.config);
-    return response;
-  },
+  (response) => response,
   (error) => {
-    settle(error.config);
     if (error.response?.status === 401) {
       localStorage.removeItem('nexusai_token');
       window.dispatchEvent(new CustomEvent('nexusai:unauthorized'));
+    }
+    // No answer at all (timed out, offline, server still waking): say so in plain words
+    // instead of "timeout of 15000ms exceeded".
+    if (!error.response && (error.code === 'ECONNABORTED' || error.code === 'ERR_NETWORK')) {
+      error.message = error.code === 'ECONNABORTED'
+        ? 'The server is taking a while to wake up. Please try again in a few seconds.'
+        : 'Could not reach the server. Check your connection and try again.';
     }
     return Promise.reject(error);
   }

@@ -2,6 +2,10 @@ import axios from 'axios';
 
 const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
+// The API address, also used by the agent's streaming requests (agentStream.js), which
+// call fetch directly instead of going through axios.
+export const API_BASE = baseURL.replace(/\/+$/, '');
+
 const api = axios.create({
   baseURL,
   // The free hosting plan puts the server to sleep when idle, and waking it can take
